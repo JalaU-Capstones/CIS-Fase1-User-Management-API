@@ -1,0 +1,9 @@
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    url: jdbc:mysql://localhost:3307/sd3?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+    username: sd3user
+    password: sd3pass
