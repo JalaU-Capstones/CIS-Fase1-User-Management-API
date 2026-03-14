@@ -1,6 +1,7 @@
 package com.cis.api.service;
 
 import com.cis.api.dto.UserResponseDto;
+import com.cis.api.exception.ResourceNotFoundException;
 import com.cis.api.model.User;
 import com.cis.api.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -14,6 +15,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -76,5 +78,22 @@ class UserServiceTest {
         assertThat(result.name()).isEqualTo("Paula");
         assertThat(result.login()).isEqualTo("pmartin");
         assertThat(result).isNotNull();
+    }
+
+    /**
+     * Verifies that getUserById throws ResourceNotFoundException when user does not exist.
+     * Uses Optional.empty() to simulate that
+     * the repository found nothing — no real database needed.
+     */
+    @Test
+    void shouldThrowResourceNotFoundExceptionWhenUserDoesNotExist() {
+        // given
+        UUID id = UUID.randomUUID();
+        given(userRepository.findById(id)).willReturn(Optional.empty());
+
+        // when / then
+        assertThatThrownBy(() -> userService.getUserById(id.toString()))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("User not found with id:");
     }
 }
