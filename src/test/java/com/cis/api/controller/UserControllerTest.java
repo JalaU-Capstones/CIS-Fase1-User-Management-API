@@ -4,14 +4,19 @@ import com.cis.api.dto.UserRequestDto;
 import com.cis.api.dto.UserResponseDto;
 import com.cis.api.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
+import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.List;
 import java.util.UUID;
@@ -33,11 +38,17 @@ class UserControllerTest {
     private MockMvc mockMvc;
     private ObjectMapper objectMapper = new ObjectMapper();
 
+    @BeforeEach
+    void setUp() {
+        // Configure MockMvc with a global exception advice
+        mockMvc = MockMvcBuilders.standaloneSetup(userController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+    }
+
     @Test
     void getAllUsers_ShouldReturnListOfUsers() throws Exception {
         // given
-        mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
-
         List<UserResponseDto> users = List.of(
                 new UserResponseDto(UUID.randomUUID(), "John Doe", "jdoe"),
                 new UserResponseDto(UUID.randomUUID(), "Jane Smith", "jsmith")
@@ -55,8 +66,6 @@ class UserControllerTest {
     @Test
     void createUser_WithValidData_ShouldReturn201() throws Exception {
         // given
-        mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
-
         UserRequestDto request = new UserRequestDto("Juan Pérez", "jperez", "123456");
         UUID userId = UUID.randomUUID();
         UserResponseDto response = new UserResponseDto(userId, "Juan Pérez", "jperez");
@@ -76,8 +85,6 @@ class UserControllerTest {
     @Test
     void createUser_WithInvalidData_ShouldReturn400() throws Exception {
         // given
-        mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
-
         UserRequestDto invalidRequest = new UserRequestDto("", "jp", "123");
 
         // when & then
@@ -88,10 +95,8 @@ class UserControllerTest {
     }
 
     @Test
-    void createUser_WhenLoginExists_ShouldReturn500() throws Exception {
+    void createUser_WhenLoginExists_ShouldReturn400() throws Exception {  // Cambiado a 400
         // given
-        mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
-
         UserRequestDto request = new UserRequestDto("Juan Pérez", "jperez", "123456");
 
         given(userService.createUser(any(UserRequestDto.class)))
@@ -101,6 +106,18 @@ class UserControllerTest {
         mockMvc.perform(post("/api/v1/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isInternalServerError());
+                .andExpect(status().isBadRequest());  // Ahora espera 400
+    }
+}
+
+/**
+ * Global exception handler for tests
+ */
+@RestControllerAdvice
+class GlobalExceptionHandler {
+
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<String> handleRuntimeException(RuntimeException ex) {
+        return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 }

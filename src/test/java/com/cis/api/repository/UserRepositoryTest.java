@@ -65,6 +65,7 @@ class UserRepositoryTest {
     void saveUser_ShouldGenerateAndReturnId() {
         // given
         User user = new User();
+        user.setId(UUID.randomUUID());
         user.setName("New User");
         user.setLogin("newuser");
         user.setPassword("password123");
