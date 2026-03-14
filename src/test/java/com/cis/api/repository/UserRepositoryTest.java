@@ -34,7 +34,50 @@ class UserRepositoryTest {
 
         // then
         assertThat(users).hasSize(2)
-            .extracting(User::getLogin)
-            .containsExactlyInAnyOrder("jdoe", "jsmith");
+                .extracting(User::getLogin)
+                .containsExactlyInAnyOrder("jdoe", "jsmith");
+    }
+
+    // ===== NUEVOS TESTS PARA CREATE USER =====
+
+    @Test
+    void existsByLogin_WhenLoginExists_ShouldReturnTrue() {
+        // given
+        User user = new User(UUID.randomUUID(), "Test User", "testlogin", "password");
+        entityManager.persist(user);
+        entityManager.flush();
+
+        // when
+        boolean exists = userRepository.existsByLogin("testlogin");
+
+        // then
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    void existsByLogin_WhenLoginDoesNotExist_ShouldReturnFalse() {
+        // when
+        boolean exists = userRepository.existsByLogin("nonexistent");
+
+        // then
+        assertThat(exists).isFalse();
+    }
+
+    @Test
+    void saveUser_ShouldGenerateAndReturnId() {
+        // given
+        User user = new User();
+        user.setName("New User");
+        user.setLogin("newuser");
+        user.setPassword("password123");
+
+        // when
+        User savedUser = userRepository.save(user);
+
+        // then
+        assertThat(savedUser.getId()).isNotNull();
+        assertThat(savedUser.getId()).isInstanceOf(UUID.class);
+        assertThat(savedUser.getName()).isEqualTo("New User");
+        assertThat(savedUser.getLogin()).isEqualTo("newuser");
     }
 }

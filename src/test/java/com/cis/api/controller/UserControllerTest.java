@@ -1,61 +1,106 @@
 package com.cis.api.controller;
 
-import com.cis.api.config.SecurityConfig;
+import com.cis.api.dto.UserRequestDto;
 import com.cis.api.dto.UserResponseDto;
 import com.cis.api.service.UserService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.context.annotation.Import;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
-import java.util.Collections;
 import java.util.List;
 import java.util.UUID;
 
-import static org.hamcrest.Matchers.hasSize;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(UserController.class)
-@Import(SecurityConfig.class)
+@ExtendWith(MockitoExtension.class)
 class UserControllerTest {
 
-    @Autowired
-    private MockMvc mockMvc;
-
-    @MockitoBean
+    @Mock
     private UserService userService;
 
-    @Test
-    void shouldReturnOkAndUsersList() throws Exception {
-        // given
-        UserResponseDto userDto = new UserResponseDto(UUID.randomUUID(), "Test User", "test");
-        given(userService.getAllUsers()).willReturn(List.of(userDto));
+    @InjectMocks
+    private UserController userController;
 
-        // when/then
-        mockMvc.perform(get("/api/v1/users")
-                .contentType(MediaType.APPLICATION_JSON))
+    private MockMvc mockMvc;
+    private ObjectMapper objectMapper = new ObjectMapper();
+
+    @Test
+    void getAllUsers_ShouldReturnListOfUsers() throws Exception {
+        // given
+        mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
+
+        List<UserResponseDto> users = List.of(
+                new UserResponseDto(UUID.randomUUID(), "John Doe", "jdoe"),
+                new UserResponseDto(UUID.randomUUID(), "Jane Smith", "jsmith")
+        );
+        given(userService.getAllUsers()).willReturn(users);
+
+        // when & then
+        mockMvc.perform(get("/api/v1/users"))
                 .andExpect(status().isOk())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$", hasSize(1)))
-                .andExpect(jsonPath("$[0].name").value("Test User"))
-                .andExpect(jsonPath("$[0].login").value("test"));
+                .andExpect(jsonPath("$.length()").value(2))
+                .andExpect(jsonPath("$[0].name").value("John Doe"))
+                .andExpect(jsonPath("$[1].login").value("jsmith"));
     }
 
     @Test
-    void shouldReturnEmptyList() throws Exception {
+    void createUser_WithValidData_ShouldReturn201() throws Exception {
         // given
-        given(userService.getAllUsers()).willReturn(Collections.emptyList());
+        mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
 
-        // when/then
-        mockMvc.perform(get("/api/v1/users"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$", hasSize(0)));
+        UserRequestDto request = new UserRequestDto("Juan Pérez", "jperez", "123456");
+        UUID userId = UUID.randomUUID();
+        UserResponseDto response = new UserResponseDto(userId, "Juan Pérez", "jperez");
+
+        given(userService.createUser(any(UserRequestDto.class))).willReturn(response);
+
+        // when & then
+        mockMvc.perform(post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(userId.toString()))
+                .andExpect(jsonPath("$.name").value("Juan Pérez"))
+                .andExpect(jsonPath("$.login").value("jperez"));
+    }
+
+    @Test
+    void createUser_WithInvalidData_ShouldReturn400() throws Exception {
+        // given
+        mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
+
+        UserRequestDto invalidRequest = new UserRequestDto("", "jp", "123");
+
+        // when & then
+        mockMvc.perform(post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(invalidRequest)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createUser_WhenLoginExists_ShouldReturn500() throws Exception {
+        // given
+        mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
+
+        UserRequestDto request = new UserRequestDto("Juan Pérez", "jperez", "123456");
+
+        given(userService.createUser(any(UserRequestDto.class)))
+                .willThrow(new RuntimeException("Login already exists: jperez"));
+
+        // when & then
+        mockMvc.perform(post("/api/v1/users")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isInternalServerError());
     }
 }
