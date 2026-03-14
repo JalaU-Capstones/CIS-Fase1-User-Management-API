@@ -58,8 +58,6 @@ class UserServiceTest {
         assertThat(result).isEmpty();
     }
 
-    // ===== NUEVOS TESTS PARA CREATE USER =====
-
     @Test
     void shouldCreateUserSuccessfully() {
         // given

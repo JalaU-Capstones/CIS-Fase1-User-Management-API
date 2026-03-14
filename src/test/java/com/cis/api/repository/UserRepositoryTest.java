@@ -38,8 +38,6 @@ class UserRepositoryTest {
                 .containsExactlyInAnyOrder("jdoe", "jsmith");
     }
 
-    // ===== NUEVOS TESTS PARA CREATE USER =====
-
     @Test
     void existsByLogin_WhenLoginExists_ShouldReturnTrue() {
         // given
