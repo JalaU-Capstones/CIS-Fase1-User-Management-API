@@ -2,6 +2,7 @@ package com.cis.api.controller;
 
 import com.cis.api.config.SecurityConfig;
 import com.cis.api.dto.UserResponseDto;
+import com.cis.api.exception.ResourceNotFoundException;
 import com.cis.api.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,5 +58,42 @@ class UserControllerTest {
         mockMvc.perform(get("/api/v1/users"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$", hasSize(0)));
+    }
+    /**
+     * Verifies that GET /api/v1/users/{id} returns HTTP 200
+     * and the correct user JSON when the user exists.
+     * MockMvc simulates the HTTP call — no real server needed.
+     */
+    @Test
+    void shouldReturnOkAndUserWhenExists() throws Exception {
+        // given
+        UUID id = UUID.randomUUID();
+        UserResponseDto userDto = new UserResponseDto(id, "Paula", "pmartin");
+        given(userService.getUserById(id.toString())).willReturn(userDto);
+
+        // when/then
+        mockMvc.perform(get("/api/v1/users/" + id)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isOk())
+                .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+                .andExpect(jsonPath("$.name").value("Paula"))
+                .andExpect(jsonPath("$.login").value("pmartin"));
+    }
+
+    /**
+     * Verifies that GET /api/v1/users/{id} returns HTTP 404
+     * when the user does not exist.
+     * MockMvc simulates the HTTP call — no real server needed.
+     */
+    @Test
+    void shouldReturnNotFoundWhenUserDoesNotExist() throws Exception {
+        // given
+        UUID id = UUID.randomUUID();
+        given(userService.getUserById(id.toString()))
+                .willThrow(new ResourceNotFoundException("User not found with id: " + id));
+
+        // when/then
+        mockMvc.perform(get("/api/v1/users/" + id))
+                .andExpect(status().isNotFound());
     }
 }

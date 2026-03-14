@@ -1,6 +1,7 @@
 package com.cis.api.service;
 
 import com.cis.api.dto.UserResponseDto;
+import com.cis.api.exception.ResourceNotFoundException;
 import com.cis.api.model.User;
 import com.cis.api.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -11,8 +12,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
@@ -52,5 +55,45 @@ class UserServiceTest {
 
         // then
         assertThat(result).isEmpty();
+    }
+
+    /**
+     * Verifies that getUserById returns a UserResponseDto when the user exists.
+     * Uses Optional.of(user) to simulate a successful repository response,
+     * meaning that user exist — no real database needed.
+     * Ensures password is never included in the response.
+     */
+    @Test
+    void shouldReturnUserDtoWhenUserExists() {
+        // given
+        UUID id = UUID.randomUUID();
+        User user = new User(id, "Paula", "pmartin", "pass");
+        given(userRepository.findById(id)).willReturn(Optional.of(user));
+
+        // when
+        UserResponseDto result = userService.getUserById(id.toString());
+
+        // then
+        assertThat(result.id()).isEqualTo(id);
+        assertThat(result.name()).isEqualTo("Paula");
+        assertThat(result.login()).isEqualTo("pmartin");
+        assertThat(result).isNotNull();
+    }
+
+    /**
+     * Verifies that getUserById throws ResourceNotFoundException when user does not exist.
+     * Uses Optional.empty() to simulate that
+     * the repository found nothing — no real database needed.
+     */
+    @Test
+    void shouldThrowResourceNotFoundExceptionWhenUserDoesNotExist() {
+        // given
+        UUID id = UUID.randomUUID();
+        given(userRepository.findById(id)).willReturn(Optional.empty());
+
+        // when / then
+        assertThatThrownBy(() -> userService.getUserById(id.toString()))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("User not found with id:");
     }
 }

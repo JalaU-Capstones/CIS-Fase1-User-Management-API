@@ -5,6 +5,7 @@ import com.cis.api.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -30,5 +31,17 @@ public class UserController {
     @GetMapping
     public ResponseEntity<List<UserResponseDto>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
+    }
+
+    /**
+     * Retrieves a specific user by ID.
+     * US 1.1.2: Retrieve specific user by ID.
+     *
+     * @param id UUID of the user
+     * @return 200 OK with UserResponseDto if found, 404 if not found
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<UserResponseDto> getUserById(@PathVariable String id) {
+        return ResponseEntity.ok(userService.getUserById(id));
     }
 }
