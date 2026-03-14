@@ -19,6 +19,7 @@ public class SecurityConfig {
      * Configures the security filter chain.
      * - Disables CSRF (stateless API).
      * - Allows public access to GET /api/v1/users (R6).
+     * - Allows public access to GET /api/v1/users/{id} (R6).
      * - Requires authentication for all other endpoints (future scope).
      *
      * @param http the HttpSecurity object to configure.
@@ -31,6 +32,7 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers("/api/v1/users").permitAll()
+                .requestMatchers("/api/v1/users/{id}").permitAll()
                 .anyRequest().authenticated()
             )
             .build();
