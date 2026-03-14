@@ -11,6 +11,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -52,5 +53,28 @@ class UserServiceTest {
 
         // then
         assertThat(result).isEmpty();
+    }
+
+    /**
+     * Verifies that getUserById returns a UserResponseDto when the user exists.
+     * Uses Optional.of(user) to simulate a successful repository response,
+     * meaning that user exist — no real database needed.
+     * Ensures password is never included in the response.
+     */
+    @Test
+    void shouldReturnUserDtoWhenUserExists() {
+        // given
+        UUID id = UUID.randomUUID();
+        User user = new User(id, "Paula", "pmartin", "pass");
+        given(userRepository.findById(id)).willReturn(Optional.of(user));
+
+        // when
+        UserResponseDto result = userService.getUserById(id.toString());
+
+        // then
+        assertThat(result.id()).isEqualTo(id);
+        assertThat(result.name()).isEqualTo("Paula");
+        assertThat(result.login()).isEqualTo("pmartin");
+        assertThat(result).isNotNull();
     }
 }
