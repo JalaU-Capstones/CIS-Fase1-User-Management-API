@@ -34,13 +34,12 @@ class UserRepositoryTest {
 
         // then
         assertThat(users).hasSize(2)
-            .extracting(User::getLogin)
-            .containsExactlyInAnyOrder("jdoe", "jsmith");
+                .extracting(User::getLogin)
+                .containsExactlyInAnyOrder("jdoe", "jsmith");
     }
+
     /**
      * Verifies that findById returns the correct user when the user exists.
-     * Uses TestEntityManager to insert a user directly into H2 in-memory database
-     * without going through the service layer.
      */
     @Test
     void shouldFindUserById() {
@@ -61,7 +60,6 @@ class UserRepositoryTest {
 
     /**
      * Verifies that findById returns empty when the user does not exist.
-     * Optional.empty() is expected just an empty response, not exception.
      */
     @Test
     void shouldReturnEmptyWhenUserNotFound() {
@@ -73,5 +71,47 @@ class UserRepositoryTest {
 
         // then
         assertThat(result).isEmpty();
+    }
+
+    @Test
+    void existsByLogin_WhenLoginExists_ShouldReturnTrue() {
+        // given
+        User user = new User(UUID.randomUUID(), "Test User", "testlogin", "password");
+        entityManager.persist(user);
+        entityManager.flush();
+
+        // when
+        boolean exists = userRepository.existsByLogin("testlogin");
+
+        // then
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    void existsByLogin_WhenLoginDoesNotExist_ShouldReturnFalse() {
+        // when
+        boolean exists = userRepository.existsByLogin("nonexistent");
+
+        // then
+        assertThat(exists).isFalse();
+    }
+
+    @Test
+    void saveUser_ShouldGenerateAndReturnId() {
+        // given
+        User user = new User();
+        user.setId(UUID.randomUUID());
+        user.setName("New User");
+        user.setLogin("newuser");
+        user.setPassword("password123");
+
+        // when
+        User savedUser = userRepository.save(user);
+
+        // then
+        assertThat(savedUser.getId()).isNotNull();
+        assertThat(savedUser.getId()).isInstanceOf(UUID.class);
+        assertThat(savedUser.getName()).isEqualTo("New User");
+        assertThat(savedUser.getLogin()).isEqualTo("newuser");
     }
 }
