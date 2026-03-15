@@ -30,6 +30,8 @@ class UserServiceTest {
     @InjectMocks
     private UserService userService;
 
+    // ===== TESTS DE LECTURA (US 1.1.1) =====
+
     @Test
     void shouldReturnListOfUsersAsDtos() {
         // given
@@ -57,6 +59,8 @@ class UserServiceTest {
         // then
         assertThat(result).isEmpty();
     }
+
+    // ===== TESTS DE CREACIÓN (US 1.2.1) =====
 
     @Test
     void shouldCreateUserSuccessfully() {
