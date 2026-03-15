@@ -2,6 +2,7 @@ package com.cis.api.service;
 
 import com.cis.api.dto.UserRequestDto;
 import com.cis.api.dto.UserResponseDto;
+import com.cis.api.exception.ResourceNotFoundException;
 import com.cis.api.model.User;
 import com.cis.api.repository.UserRepository;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,7 +32,7 @@ class UserServiceTest {
     @InjectMocks
     private UserService userService;
 
-    // ===== TESTS DE LECTURA (US 1.1.1) =====
+    // ===== TESTS DE LECTURA - LISTA (US 1.1.1) =====
 
     @Test
     void shouldReturnListOfUsersAsDtos() {
@@ -58,6 +60,37 @@ class UserServiceTest {
 
         // then
         assertThat(result).isEmpty();
+    }
+
+    // ===== TESTS DE LECTURA - POR ID (US 1.1.2) =====
+
+    @Test
+    void shouldReturnUserDtoWhenUserExists() {
+        // given
+        UUID id = UUID.randomUUID();
+        User user = new User(id, "Paula", "pmartin", "pass");
+        given(userRepository.findById(id)).willReturn(Optional.of(user));
+
+        // when
+        UserResponseDto result = userService.getUserById(id.toString());
+
+        // then
+        assertThat(result.id()).isEqualTo(id);
+        assertThat(result.name()).isEqualTo("Paula");
+        assertThat(result.login()).isEqualTo("pmartin");
+        assertThat(result).isNotNull();
+    }
+
+    @Test
+    void shouldThrowResourceNotFoundExceptionWhenUserDoesNotExist() {
+        // given
+        UUID id = UUID.randomUUID();
+        given(userRepository.findById(id)).willReturn(Optional.empty());
+
+        // when / then
+        assertThatThrownBy(() -> userService.getUserById(id.toString()))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("User not found with id:");
     }
 
     // ===== TESTS DE CREACIÓN (US 1.2.1) =====

@@ -2,6 +2,7 @@ package com.cis.api.service;
 
 import com.cis.api.dto.UserRequestDto;
 import com.cis.api.dto.UserResponseDto;
+import com.cis.api.exception.ResourceNotFoundException;
 import com.cis.api.model.User;
 import com.cis.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -36,7 +37,23 @@ public class UserService {
     }
 
     /**
+     * Retrieves a specific user by ID.
+     * US 1.1.2: Retrieve specific user by ID.
+     *
+     * @param id UUID of the user
+     * @return UserResponseDto if found
+     * @throws ResourceNotFoundException if user not found
+     */
+    public UserResponseDto getUserById(String id) {
+        UUID uuid = UUID.fromString(id);
+        User user = userRepository.findById(uuid)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        return mapToDto(user);
+    }
+
+    /**
      * Creates a new user.
+     * US 1.2.1: Create a new user.
      *
      * @param userRequest The user data from the request
      * @return UserResponseDto of the created user
