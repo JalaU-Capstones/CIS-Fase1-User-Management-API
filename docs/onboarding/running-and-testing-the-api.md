@@ -79,6 +79,42 @@ curl -v http://localhost:8080/api/v1/users
 ]
 ```
 
+### GET /api/v1/users/{id}
+Retrieve a specific user by ID (password field is excluded).
+
+**Authentication:** Not required (public read).
+
+**Request:**
+```bash
+curl http://localhost:8080/api/v1/users/{id}
+```
+
+**Example:**
+```bash
+curl http://localhost:8080/api/v1/users/550e8400-e29b-41d4-a716-446655440000
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "name": "Test User",
+  "login": "testuser"
+}
+```
+
+**Expected Response (404 Not Found):**
+```json
+{
+  "status": 404,
+  "message": "User not found with id: 550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+**Notes:**
+- The `id` must be a valid UUID format.
+- The `password` field is never returned in the response.
+
 ## 6. Profiles
 
 - **default**: Uses local MySQL (localhost:3306). Ideal for local development with Docker.
