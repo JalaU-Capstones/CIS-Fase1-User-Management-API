@@ -38,6 +38,41 @@ class UserRepositoryTest {
                 .containsExactlyInAnyOrder("jdoe", "jsmith");
     }
 
+    /**
+     * Verifies that findById returns the correct user when the user exists.
+     */
+    @Test
+    void shouldFindUserById() {
+        // given
+        UUID id = UUID.randomUUID();
+        User user = new User(id, "Paula", "pmartin", "pass");
+        entityManager.persist(user);
+        entityManager.flush();
+
+        // when
+        var result = userRepository.findById(id);
+
+        // then
+        assertThat(result).isPresent();
+        assertThat(result.get().getLogin()).isEqualTo("pmartin");
+        assertThat(result.get().getName()).isEqualTo("Paula");
+    }
+
+    /**
+     * Verifies that findById returns empty when the user does not exist.
+     */
+    @Test
+    void shouldReturnEmptyWhenUserNotFound() {
+        // given
+        UUID id = UUID.randomUUID();
+
+        // when
+        var result = userRepository.findById(id);
+
+        // then
+        assertThat(result).isEmpty();
+    }
+
     @Test
     void existsByLogin_WhenLoginExists_ShouldReturnTrue() {
         // given

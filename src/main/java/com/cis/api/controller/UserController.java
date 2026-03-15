@@ -34,6 +34,18 @@ public class UserController {
     }
 
     /**
+     * Retrieves a specific user by ID.
+     * US 1.1.2: Retrieve specific user by ID.
+     *
+     * @param id UUID of the user
+     * @return 200 OK with UserResponseDto if found, 404 if not found
+     */
+    @GetMapping("/{id}")
+    public ResponseEntity<UserResponseDto> getUserById(@PathVariable String id) {
+        return ResponseEntity.ok(userService.getUserById(id));
+    }
+
+    /**
      * Creates a new user.
      * US 1.2.1: Create a new user.
      *
