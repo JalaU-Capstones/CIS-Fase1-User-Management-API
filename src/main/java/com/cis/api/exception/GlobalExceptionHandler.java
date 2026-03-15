@@ -18,6 +18,7 @@ import java.util.Map;
  */
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
     /**
      * Handles ResourceNotFoundException and returns HTTP 404
      * with a JSON body containing the status and error message.
@@ -30,6 +31,23 @@ public class GlobalExceptionHandler {
         Map<String, Object> error = new HashMap<>();
         error.put("status", 404);
         error.put("message", ex.getMessage());
+        error.put("error", "Not Found");
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    /**
+     * Handles RuntimeException (like duplicate login) and returns HTTP 400
+     * with a JSON body containing the status and error message.
+     *
+     * @param ex the runtime exception
+     * @return ResponseEntity with status 400 and error details
+     */
+    @ExceptionHandler(RuntimeException.class)
+    public ResponseEntity<Map<String, Object>> handleRuntimeException(RuntimeException ex) {
+        Map<String, Object> error = new HashMap<>();
+        error.put("status", 400);
+        error.put("message", ex.getMessage());
+        error.put("error", "Bad Request");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 }

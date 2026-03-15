@@ -2,6 +2,7 @@ package com.cis.api.controller;
 
 import com.cis.api.dto.UserRequestDto;
 import com.cis.api.dto.UserResponseDto;
+import com.cis.api.exception.GlobalExceptionHandler;
 import com.cis.api.exception.ResourceNotFoundException;
 import com.cis.api.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -145,17 +146,5 @@ class UserControllerTest {
         // when/then
         mockMvc.perform(get("/api/v1/users/" + id))
                 .andExpect(status().isNotFound());
-    }
-}
-
-/**
- * Global exception handler for tests
- */
-@RestControllerAdvice
-class GlobalExceptionHandler {
-
-    @ExceptionHandler(RuntimeException.class)
-    public ResponseEntity<String> handleRuntimeException(RuntimeException ex) {
-        return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 }
