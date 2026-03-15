@@ -189,4 +189,43 @@ class UserControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void updateUser_WithBlankName_ShouldReturn400() throws Exception {
+        // given
+        UUID id = UUID.randomUUID();
+        UserRequestDto request = new UserRequestDto("", "juanv", "123456");
+
+        // when & then
+        mockMvc.perform(put("/api/v1/users/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateUser_WithShortLogin_ShouldReturn400() throws Exception {
+        // given
+        UUID id = UUID.randomUUID();
+        UserRequestDto request = new UserRequestDto("Juan Valdez", "jv", "123456");
+
+        // when & then
+        mockMvc.perform(put("/api/v1/users/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateUser_WithShortPassword_ShouldReturn400() throws Exception {
+        // given
+        UUID id = UUID.randomUUID();
+        UserRequestDto request = new UserRequestDto("Juan Valdez", "juanv", "123");
+
+        // when & then
+        mockMvc.perform(put("/api/v1/users/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
 }
