@@ -199,4 +199,22 @@ class UserServiceTest {
         then(userRepository).should().findById(id);
         then(userRepository).should(never()).save(any(User.class));
     }
+
+    @Test
+    void shouldThrowExceptionWhenUpdatingWithLoginOfAnotherUser() {
+        // given
+        UUID id = UUID.randomUUID();
+        User existingUser = new User(id, "Juan Viejo", "juanv", "oldpass");
+        UserRequestDto request = new UserRequestDto("Juan Viejo", "loginajeno", "oldpass");
+
+        given(userRepository.findById(id)).willReturn(Optional.of(existingUser));
+        given(userRepository.existsByLoginAndIdNot("loginajeno", id)).willReturn(true);
+
+        // when & then
+        assertThatThrownBy(() -> userService.updateUser(id.toString(), request))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Login already exists: loginajeno");
+
+        then(userRepository).should(never()).save(any(User.class));
+    }
 }

@@ -228,4 +228,20 @@ class UserControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void updateUser_WithDuplicateLoginFromAnotherUser_ShouldReturn400() throws Exception {
+        // given
+        UUID id = UUID.randomUUID();
+        UserRequestDto request = new UserRequestDto("Juan", "loginajeno", "123456");
+
+        given(userService.updateUser(eq(id.toString()), any(UserRequestDto.class)))
+                .willThrow(new RuntimeException("Login already exists: loginajeno"));
+
+        // when & then
+        mockMvc.perform(put("/api/v1/users/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
 }
