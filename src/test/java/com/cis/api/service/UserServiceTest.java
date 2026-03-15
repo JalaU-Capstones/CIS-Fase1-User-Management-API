@@ -155,4 +155,31 @@ class UserServiceTest {
         assertThat(result.id()).isNotNull();
         assertThat(result.id().toString()).matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
     }
+
+    // ===== TESTS of Update (US 1.3.1) =====
+
+    @Test
+    void shouldUpdateUserSuccessfully() {
+        // given
+        UUID id = UUID.randomUUID();
+        User existingUser = new User(id, "Juan Viejo", "juanv", "oldpass");
+        UserRequestDto request = new UserRequestDto("Juan Actualizado", "jupdated", "newpass123");
+        User updatedUser = new User(id, "Juan Actualizado", "jupdated", "newpass123");
+
+        given(userRepository.findById(id)).willReturn(Optional.of(existingUser));
+        given(userRepository.existsByLoginAndIdNot("jupdated", id)).willReturn(false);
+        given(userRepository.save(any(User.class))).willReturn(updatedUser);
+
+        // when
+        UserResponseDto result = userService.updateUser(id.toString(), request);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.id()).isEqualTo(id);
+        assertThat(result.name()).isEqualTo("Juan Actualizado");
+        assertThat(result.login()).isEqualTo("jupdated");
+
+        then(userRepository).should().findById(id);
+        then(userRepository).should().save(any(User.class));
+    }
 }

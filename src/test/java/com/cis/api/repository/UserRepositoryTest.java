@@ -114,4 +114,35 @@ class UserRepositoryTest {
         assertThat(savedUser.getName()).isEqualTo("New User");
         assertThat(savedUser.getLogin()).isEqualTo("newuser");
     }
+    // ===== TESTS of update (US 1.3.1) =====
+
+    @Test
+    void existsByLoginAndIdNot_WhenLoginExistsForDifferentUser_ShouldReturnTrue() {
+        // given
+        UUID userId1 = UUID.randomUUID();
+        UUID userId2 = UUID.randomUUID();
+        entityManager.persist(new User(userId1, "User One", "loginshared", "pass1"));
+        entityManager.persist(new User(userId2, "User Two", "otherone", "pass2"));
+        entityManager.flush();
+
+        // when — userId2 tries to take "loginshared" which belongs to userId1
+        boolean exists = userRepository.existsByLoginAndIdNot("loginshared", userId2);
+
+        // then
+        assertThat(exists).isTrue();
+    }
+
+    @Test
+    void existsByLoginAndIdNot_WhenLoginBelongsToSameUser_ShouldReturnFalse() {
+        // given
+        UUID userId = UUID.randomUUID();
+        entityManager.persist(new User(userId, "User One", "mylogin", "pass1"));
+        entityManager.flush();
+
+        // when — same user keeps their own login
+        boolean exists = userRepository.existsByLoginAndIdNot("mylogin", userId);
+
+        // then
+        assertThat(exists).isFalse();
+    }
 }

@@ -147,4 +147,29 @@ class UserControllerTest {
         mockMvc.perform(get("/api/v1/users/" + id))
                 .andExpect(status().isNotFound());
     }
+
+    // ===== TESTS Of Update (US 1.3.1) =====
+
+    /**
+     * Verifies that PUT /api/v1/users/{id} returns HTTP 200
+     * and the updated user JSON when the user exists and data is valid.
+     */
+    @Test
+    void updateUser_WithValidIdAndBody_ShouldReturn200() throws Exception {
+        // given
+        UUID id = UUID.randomUUID();
+        UserRequestDto request = new UserRequestDto("Juan Actualizado", "jupdated", "newpass123");
+        UserResponseDto response = new UserResponseDto(id, "Juan Actualizado", "jupdated");
+
+        given(userService.updateUser(id.toString(), any(UserRequestDto.class))).willReturn(response);
+
+        // when & then
+        mockMvc.perform(put("/api/v1/users/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id.toString()))
+                .andExpect(jsonPath("$.name").value("Juan Actualizado"))
+                .andExpect(jsonPath("$.login").value("jupdated"));
+    }
 }
