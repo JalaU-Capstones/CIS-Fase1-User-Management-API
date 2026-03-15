@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -161,7 +162,7 @@ class UserControllerTest {
         UserRequestDto request = new UserRequestDto("Juan Actualizado", "jupdated", "newpass123");
         UserResponseDto response = new UserResponseDto(id, "Juan Actualizado", "jupdated");
 
-        given(userService.updateUser(id.toString(), any(UserRequestDto.class))).willReturn(response);
+        given(userService.updateUser(eq(id.toString()), any(UserRequestDto.class))).willReturn(response);
 
         // when & then
         mockMvc.perform(put("/api/v1/users/" + id)

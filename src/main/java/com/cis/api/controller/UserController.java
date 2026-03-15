@@ -57,4 +57,20 @@ public class UserController {
         UserResponseDto createdUser = userService.createUser(userRequest);
         return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
     }
+
+    /**
+     * Updates an existing user by ID.
+     * US 1.3.1: Update a user by ID.
+     *
+     * @param id          UUID of the user
+     * @param userRequest The updated user data
+     * @return 200 OK with updated UserResponseDto, or 404 if not found
+     */
+    @PutMapping("/{id}")
+    public ResponseEntity<UserResponseDto> updateUser(
+            @PathVariable String id,
+            @Valid @RequestBody UserRequestDto userRequest) {
+        UserResponseDto updatedUser = userService.updateUser(id, userRequest);
+        return ResponseEntity.ok(updatedUser);
+    }
 }
