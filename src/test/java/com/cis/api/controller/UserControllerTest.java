@@ -173,4 +173,20 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.name").value("Juan Actualizado"))
                 .andExpect(jsonPath("$.login").value("jupdated"));
     }
+
+    @Test
+    void updateUser_WithNonExistentId_ShouldReturn404() throws Exception {
+        // given
+        UUID id = UUID.randomUUID();
+        UserRequestDto request = new UserRequestDto("Juan", "juanv", "123456");
+
+        given(userService.updateUser(eq(id.toString()), any(UserRequestDto.class)))
+                .willThrow(new ResourceNotFoundException("User not found with id: " + id));
+
+        // when & then
+        mockMvc.perform(put("/api/v1/users/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound());
+    }
 }

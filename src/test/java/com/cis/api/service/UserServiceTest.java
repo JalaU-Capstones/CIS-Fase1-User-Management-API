@@ -182,4 +182,21 @@ class UserServiceTest {
         then(userRepository).should().findById(id);
         then(userRepository).should().save(any(User.class));
     }
+
+    @Test
+    void shouldThrowResourceNotFoundExceptionWhenUpdatingNonExistentUser() {
+        // given
+        UUID id = UUID.randomUUID();
+        UserRequestDto request = new UserRequestDto("Juan", "juanv", "123456");
+
+        given(userRepository.findById(id)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> userService.updateUser(id.toString(), request))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("User not found with id:");
+
+        then(userRepository).should().findById(id);
+        then(userRepository).should(never()).save(any(User.class));
+    }
 }
