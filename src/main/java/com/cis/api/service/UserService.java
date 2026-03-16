@@ -87,4 +87,33 @@ public class UserService {
                 user.getLogin()
         );
     }
+
+    /**
+     * Updates an existing user by ID.
+     * US 1.3.1: Update a user by ID.
+     *
+     * @param id          UUID of the user to update
+     * @param userRequest The new data for the user
+     * @return UserResponseDto of the updated user
+     * @throws ResourceNotFoundException if user not found
+     */
+    @Transactional
+    public UserResponseDto updateUser(String id, UserRequestDto userRequest) {
+        UUID uuid = UUID.fromString(id);
+
+        User user = userRepository.findById(uuid)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+
+        if (!user.getLogin().equals(userRequest.login())
+                && userRepository.existsByLoginAndIdNot(userRequest.login(), uuid)) {
+            throw new RuntimeException("Login already exists: " + userRequest.login());
+        }
+
+        user.setName(userRequest.name());
+        user.setLogin(userRequest.login());
+        user.setPassword(userRequest.password());
+
+        User updatedUser = userRepository.save(user);
+        return mapToDto(updatedUser);
+    }
 }

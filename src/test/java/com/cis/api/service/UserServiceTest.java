@@ -155,4 +155,66 @@ class UserServiceTest {
         assertThat(result.id()).isNotNull();
         assertThat(result.id().toString()).matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
     }
+
+    // ===== TESTS of Update (US 1.3.1) =====
+
+    @Test
+    void shouldUpdateUserSuccessfully() {
+        // given
+        UUID id = UUID.randomUUID();
+        User existingUser = new User(id, "Juan Viejo", "juanv", "oldpass");
+        UserRequestDto request = new UserRequestDto("Juan Actualizado", "jupdated", "newpass123");
+        User updatedUser = new User(id, "Juan Actualizado", "jupdated", "newpass123");
+
+        given(userRepository.findById(id)).willReturn(Optional.of(existingUser));
+        given(userRepository.existsByLoginAndIdNot("jupdated", id)).willReturn(false);
+        given(userRepository.save(any(User.class))).willReturn(updatedUser);
+
+        // when
+        UserResponseDto result = userService.updateUser(id.toString(), request);
+
+        // then
+        assertThat(result).isNotNull();
+        assertThat(result.id()).isEqualTo(id);
+        assertThat(result.name()).isEqualTo("Juan Actualizado");
+        assertThat(result.login()).isEqualTo("jupdated");
+
+        then(userRepository).should().findById(id);
+        then(userRepository).should().save(any(User.class));
+    }
+
+    @Test
+    void shouldThrowResourceNotFoundExceptionWhenUpdatingNonExistentUser() {
+        // given
+        UUID id = UUID.randomUUID();
+        UserRequestDto request = new UserRequestDto("Juan", "juanv", "123456");
+
+        given(userRepository.findById(id)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> userService.updateUser(id.toString(), request))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("User not found with id:");
+
+        then(userRepository).should().findById(id);
+        then(userRepository).should(never()).save(any(User.class));
+    }
+
+    @Test
+    void shouldThrowExceptionWhenUpdatingWithLoginOfAnotherUser() {
+        // given
+        UUID id = UUID.randomUUID();
+        User existingUser = new User(id, "Juan Viejo", "juanv", "oldpass");
+        UserRequestDto request = new UserRequestDto("Juan Viejo", "loginajeno", "oldpass");
+
+        given(userRepository.findById(id)).willReturn(Optional.of(existingUser));
+        given(userRepository.existsByLoginAndIdNot("loginajeno", id)).willReturn(true);
+
+        // when & then
+        assertThatThrownBy(() -> userService.updateUser(id.toString(), request))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Login already exists: loginajeno");
+
+        then(userRepository).should(never()).save(any(User.class));
+    }
 }

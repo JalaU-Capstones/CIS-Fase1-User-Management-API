@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -146,5 +147,101 @@ class UserControllerTest {
         // when/then
         mockMvc.perform(get("/api/v1/users/" + id))
                 .andExpect(status().isNotFound());
+    }
+
+    // ===== TESTS Of Update (US 1.3.1) =====
+
+    /**
+     * Verifies that PUT /api/v1/users/{id} returns HTTP 200
+     * and the updated user JSON when the user exists and data is valid.
+     */
+    @Test
+    void updateUser_WithValidIdAndBody_ShouldReturn200() throws Exception {
+        // given
+        UUID id = UUID.randomUUID();
+        UserRequestDto request = new UserRequestDto("Juan Actualizado", "jupdated", "newpass123");
+        UserResponseDto response = new UserResponseDto(id, "Juan Actualizado", "jupdated");
+
+        given(userService.updateUser(eq(id.toString()), any(UserRequestDto.class))).willReturn(response);
+
+        // when & then
+        mockMvc.perform(put("/api/v1/users/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(id.toString()))
+                .andExpect(jsonPath("$.name").value("Juan Actualizado"))
+                .andExpect(jsonPath("$.login").value("jupdated"));
+    }
+
+    @Test
+    void updateUser_WithNonExistentId_ShouldReturn404() throws Exception {
+        // given
+        UUID id = UUID.randomUUID();
+        UserRequestDto request = new UserRequestDto("Juan", "juanv", "123456");
+
+        given(userService.updateUser(eq(id.toString()), any(UserRequestDto.class)))
+                .willThrow(new ResourceNotFoundException("User not found with id: " + id));
+
+        // when & then
+        mockMvc.perform(put("/api/v1/users/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isNotFound());
+    }
+
+    @Test
+    void updateUser_WithBlankName_ShouldReturn400() throws Exception {
+        // given
+        UUID id = UUID.randomUUID();
+        UserRequestDto request = new UserRequestDto("", "juanv", "123456");
+
+        // when & then
+        mockMvc.perform(put("/api/v1/users/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateUser_WithShortLogin_ShouldReturn400() throws Exception {
+        // given
+        UUID id = UUID.randomUUID();
+        UserRequestDto request = new UserRequestDto("Juan Valdez", "jv", "123456");
+
+        // when & then
+        mockMvc.perform(put("/api/v1/users/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateUser_WithShortPassword_ShouldReturn400() throws Exception {
+        // given
+        UUID id = UUID.randomUUID();
+        UserRequestDto request = new UserRequestDto("Juan Valdez", "juanv", "123");
+
+        // when & then
+        mockMvc.perform(put("/api/v1/users/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void updateUser_WithDuplicateLoginFromAnotherUser_ShouldReturn400() throws Exception {
+        // given
+        UUID id = UUID.randomUUID();
+        UserRequestDto request = new UserRequestDto("Juan", "loginajeno", "123456");
+
+        given(userService.updateUser(eq(id.toString()), any(UserRequestDto.class)))
+                .willThrow(new RuntimeException("Login already exists: loginajeno"));
+
+        // when & then
+        mockMvc.perform(put("/api/v1/users/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
     }
 }

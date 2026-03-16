@@ -15,4 +15,5 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     // Standard JPA methods are sufficient for US 1.1.1
     // Method for US 1.2.1
     boolean existsByLogin(String login);
+    boolean existsByLoginAndIdNot(String login, UUID id);
 }
