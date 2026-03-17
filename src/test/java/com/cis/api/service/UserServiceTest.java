@@ -217,4 +217,61 @@ class UserServiceTest {
 
         then(userRepository).should(never()).save(any(User.class));
     }
+
+    // ===== TESTS of Delete (US 1.4.1) =====
+
+    /**
+     * UC 1.4.1.1 – Verifies that deleteUser removes the user
+     * when the user exists in the database.
+     */
+    @Test
+    void shouldDeleteUserSuccessfully() {
+        // given
+        UUID id = UUID.randomUUID();
+        User existingUser = new User(id, "Juan", "juanv", "pass123");
+        given(userRepository.findById(id)).willReturn(Optional.of(existingUser));
+
+        // when
+        userService.deleteUser(id.toString());
+
+        // then
+        then(userRepository).should().findById(id);
+        then(userRepository).should().delete(existingUser);
+    }
+
+    /**
+     * UC 1.4.1.2 – Verifies that deleteUser throws ResourceNotFoundException
+     * when the user does not exist.
+     */
+    @Test
+    void shouldThrowResourceNotFoundExceptionWhenDeletingNonExistentUser() {
+        // given
+        UUID id = UUID.randomUUID();
+        given(userRepository.findById(id)).willReturn(Optional.empty());
+
+        // when & then
+        assertThatThrownBy(() -> userService.deleteUser(id.toString()))
+                .isInstanceOf(ResourceNotFoundException.class)
+                .hasMessageContaining("User not found with id:");
+
+        then(userRepository).should().findById(id);
+        then(userRepository).should(never()).delete(any(User.class));
+    }
+
+    /**
+     * UC 1.4.1.3 – Verifies that deleteUser throws IllegalArgumentException
+     * when the ID format is invalid (not a UUID).
+     */
+    @Test
+    void shouldThrowExceptionWhenDeletingWithInvalidIdFormat() {
+        // given
+        String invalidId = "not-a-uuid";
+
+        // when & then
+        assertThatThrownBy(() -> userService.deleteUser(invalidId))
+                .isInstanceOf(IllegalArgumentException.class);
+
+        then(userRepository).should(never()).findById(any(UUID.class));
+        then(userRepository).should(never()).delete(any(User.class));
+    }
 }
