@@ -116,4 +116,22 @@ public class UserService {
         User updatedUser = userRepository.save(user);
         return mapToDto(updatedUser);
     }
+
+    /**
+     * Deletes a user by ID
+     * US 1.4.1: Delete a user by ID
+     *
+     * @param id UUID of the user to delete
+     * @throws ResourceNotFoundException if user not found
+     * @throws IllegalArgumentException if ID format is invalid
+     */
+    @Transactional
+    public void deleteUser(String id) {
+        UUID uuid = UUID.fromString(id);
+
+        User user = userRepository.findById(uuid)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+
+        userRepository.delete(user);
+    }
 }
