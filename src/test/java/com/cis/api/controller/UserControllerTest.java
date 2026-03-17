@@ -244,4 +244,56 @@ class UserControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest());
     }
+
+    // ===== TESTS of Delete (US 1.4.1) =====
+
+    /**
+     * UC 1.4.1.1 – Delete Existing User Successfully
+     * Verifies that DELETE /api/v1/users/{id} returns HTTP 204 No Content
+     * when the user exists and is successfully deleted.
+     */
+    @Test
+    void deleteUser_WithExistingId_ShouldReturn204() throws Exception {
+        // given
+        UUID id = UUID.randomUUID();
+        org.mockito.Mockito.doNothing().when(userService).deleteUser(id.toString());
+
+        // when & then
+        mockMvc.perform(delete("/api/v1/users/" + id))
+                .andExpect(status().isNoContent());
+    }
+
+    /**
+     * UC 1.4.1.2 – User Not Found
+     * Verifies that DELETE /api/v1/users/{id} returns HTTP 404
+     * when the user does not exist.
+     */
+    @Test
+    void deleteUser_WithNonExistentId_ShouldReturn404() throws Exception {
+        // given
+        UUID id = UUID.randomUUID();
+        org.mockito.Mockito.doThrow(new ResourceNotFoundException("User not found with id: " + id))
+                .when(userService).deleteUser(id.toString());
+
+        // when & then
+        mockMvc.perform(delete("/api/v1/users/" + id))
+                .andExpect(status().isNotFound());
+    }
+
+    /**
+     * UC 1.4.1.3 – Invalid ID Format
+     * Verifies that DELETE /api/v1/users/{id} returns HTTP 400
+     * when the ID format is not a valid UUID.
+     */
+    @Test
+    void deleteUser_WithInvalidIdFormat_ShouldReturn400() throws Exception {
+        // given
+        String invalidId = "not-a-uuid";
+        org.mockito.Mockito.doThrow(new IllegalArgumentException("Invalid UUID string: " + invalidId))
+                .when(userService).deleteUser(invalidId);
+
+        // when & then
+        mockMvc.perform(delete("/api/v1/users/" + invalidId))
+                .andExpect(status().isBadRequest());
+    }
 }
