@@ -73,4 +73,17 @@ public class UserController {
         UserResponseDto updatedUser = userService.updateUser(id, userRequest);
         return ResponseEntity.ok(updatedUser);
     }
+
+    /**
+     * Deletes a user by ID
+     * US 1.4.1: Delete a user by ID
+     *
+     * @param id UUID of the user
+     * @return 204 No Content if deleted, 404 if not found
+     */
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteUser(@PathVariable String id) {
+        userService.deleteUser(id);
+        return ResponseEntity.noContent().build();
+    }
 }

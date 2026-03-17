@@ -145,4 +145,44 @@ class UserRepositoryTest {
         // then
         assertThat(exists).isFalse();
     }
+
+    // ===== TESTS of Delete (US 1.4.1) =====
+
+    @Test
+    void deleteUser_ShouldRemoveUserFromDatabase() {
+        // given
+        UUID id = UUID.randomUUID();
+        User user = new User(id, "To Delete", "todelete", "pass123");
+        entityManager.persist(user);
+        entityManager.flush();
+
+        // when
+        userRepository.delete(user);
+        entityManager.flush();
+
+        // then
+        var result = userRepository.findById(id);
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    void deleteUser_ShouldNotAffectOtherUsers() {
+        // given
+        UUID id1 = UUID.randomUUID();
+        UUID id2 = UUID.randomUUID();
+        User user1 = new User(id1, "User One", "userone", "pass1");
+        User user2 = new User(id2, "User Two", "usertwo", "pass2");
+        entityManager.persist(user1);
+        entityManager.persist(user2);
+        entityManager.flush();
+
+        // when — delete only user1
+        userRepository.delete(user1);
+        entityManager.flush();
+
+        // then — user2 still exists
+        assertThat(userRepository.findById(id1)).isEmpty();
+        assertThat(userRepository.findById(id2)).isPresent();
+        assertThat(userRepository.findAll()).hasSize(1);
+    }
 }
