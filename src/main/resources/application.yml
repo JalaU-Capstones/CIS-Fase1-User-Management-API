@@ -1,6 +1,9 @@
 spring:
   profiles:
     active: dev
+    group:
+      "prod":
+        - "prod"
 
 application-properties:
   jwt:

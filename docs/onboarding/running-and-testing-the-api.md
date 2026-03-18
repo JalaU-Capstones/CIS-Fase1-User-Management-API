@@ -55,11 +55,20 @@ java -jar target/user-management-api-0.0.1-SNAPSHOT.jar
 
 The API will be available at `http://localhost:8080`.
 
-## 5. Testing the API
+## 5. Interactive API Documentation
+
+The project uses springdoc-openapi to generate interactive Swagger UI documentation.
+
+- **Swagger UI**: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
+- **OpenAPI JSON**: [http://localhost:8080/v3/api-docs](http://localhost:8080/v3/api-docs)
+
+You can use the Swagger UI to explore and test the API endpoints directly from your browser. For protected endpoints, you can authorize your requests by clicking the "Authorize" button and providing your JWT token in the "Bearer" format.
+
+## 6. Testing the API
 
 The API uses JWT Bearer Token Authentication. Read operations (GET) and creating the first user are public, but other write operations (PUT, DELETE) require a valid token.
 
-### 5.1. POST /api/v1/users (Public)
+### 6.1. POST /api/v1/users (Public)
 
 Create the first user. This endpoint is public.
 
@@ -83,7 +92,7 @@ curl -X POST http://localhost:8080/api/v1/users \
 }
 ```
 
-### 5.2. POST /api/v1/auth/login (Public)
+### 6.2. POST /api/v1/auth/login (Public)
 
 Authenticate to receive a JWT token.
 
@@ -106,7 +115,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 
 **Note:** Copy this token for subsequent requests.
 
-### 5.3. GET /api/v1/users (Public)
+### 6.3. GET /api/v1/users (Public)
 
 Retrieve all users (password field is excluded).
 
@@ -126,7 +135,7 @@ curl -v http://localhost:8080/api/v1/users
 ]
 ```
 
-### 5.4. GET /api/v1/users/{id} (Public)
+### 6.4. GET /api/v1/users/{id} (Public)
 Retrieve a specific user by ID.
 
 **Request:**
@@ -134,7 +143,7 @@ Retrieve a specific user by ID.
 curl http://localhost:8080/api/v1/users/550e8400-e29b-41d4-a716-446655440000
 ```
 
-### 5.5. PUT /api/v1/users/{id} (Protected)
+### 6.5. PUT /api/v1/users/{id} (Protected)
 
 Update an existing user. Requires Bearer Token.
 
@@ -162,7 +171,7 @@ curl -X PUT http://localhost:8080/api/v1/users/$USER_ID \
 }
 ```
 
-### 5.6. DELETE /api/v1/users/{id} (Protected)
+### 6.6. DELETE /api/v1/users/{id} (Protected)
 
 Delete a user. Requires Bearer Token.
 
@@ -177,19 +186,19 @@ curl -X DELETE http://localhost:8080/api/v1/users/$USER_ID \
 
 **Expected Response (204 No Content)**
 
-## 6. Profiles
+## 7. Profiles
 
 - **default**: Uses local MySQL (localhost:3306). Ideal for local development with Docker.
 - **test**: Uses H2 in-memory database. Used automatically during `mvn test`.
 
-## 7. Common Issues & Warnings
+## 8. Common Issues & Warnings
 
 - **403 Forbidden**: If you get this on PUT/DELETE, check your Authorization header format (`Bearer <token>`) and ensure the token is not expired.
 - **Port Conflict**: If port 8080 is in use, modify `server.port` in `application.properties`.
 - **Database Connection**: Ensure the Docker container is running before starting the app.
 - **Deprecation Warnings**: We use `@MockitoBean` in tests to align with Spring Boot 3.4+.
 
-## 8. Running Tests
+## 9. Running Tests
 
 To execute all unit and integration tests:
 
