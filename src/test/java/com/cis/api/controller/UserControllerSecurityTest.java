@@ -62,7 +62,7 @@ class UserControllerSecurityTest {
 
         mockMvc.perform(post("/api/v1/users")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Test\",\"login\":\"test\",\"password\":\"pass\"}")
+                        .content("{\"name\":\"Test\",\"login\":\"test\",\"password\":\"password123\"}")
                         .with(csrf()))
                 .andExpect(status().isCreated());
     }
