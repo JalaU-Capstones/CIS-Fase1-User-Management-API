@@ -3,6 +3,7 @@ package com.cis.api.exception;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -22,22 +23,22 @@ class GlobalExceptionHandlerTest {
     void handleResourceNotFoundException_ShouldReturn404() {
         ResourceNotFoundException ex = new ResourceNotFoundException("Resource not found");
         
-        ResponseEntity<Object> response = exceptionHandler.handleResourceNotFoundException(ex);
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleResourceNotFoundException(ex);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        Map<String, Object> body = (Map<String, Object>) response.getBody();
-        assertThat(body).containsEntry("message", "Resource not found");
+        ErrorResponse body = response.getBody();
+        assertThat(body.getMessage()).isEqualTo("Resource not found");
     }
 
     @Test
     void handleIllegalArgumentException_ShouldReturn400() {
         IllegalArgumentException ex = new IllegalArgumentException("Invalid argument");
 
-        ResponseEntity<Object> response = exceptionHandler.handleIllegalArgumentException(ex);
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleIllegalArgumentException(ex);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        Map<String, Object> body = (Map<String, Object>) response.getBody();
-        assertThat(body).containsEntry("message", "Invalid argument");
+        ErrorResponse body = response.getBody();
+        assertThat(body.getMessage()).isEqualTo("Invalid argument");
     }
 
     @Test
@@ -49,10 +50,21 @@ class GlobalExceptionHandlerTest {
         when(ex.getBindingResult()).thenReturn(bindingResult);
         when(bindingResult.getFieldErrors()).thenReturn(List.of(fieldError));
 
-        ResponseEntity<Object> response = exceptionHandler.handleValidationExceptions(ex);
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleValidationExceptions(ex);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        Map<String, String> body = (Map<String, String>) response.getBody();
-        assertThat(body).containsEntry("field", "defaultMessage");
+        ErrorResponse body = response.getBody();
+        assertThat(body.getDetails()).containsEntry("field", "defaultMessage");
+    }
+
+    @Test
+    void handleAuthenticationException_ShouldReturn401() {
+        AuthenticationException ex = new AuthenticationException("Invalid token") {};
+        
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleAuthenticationException(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        ErrorResponse body = response.getBody();
+        assertThat(body.getMessage()).isEqualTo("Invalid or expired token");
     }
 }
