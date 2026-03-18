@@ -16,6 +16,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.List;
@@ -63,6 +64,7 @@ class UserControllerTest {
     }
 
     @Test
+    @WithMockUser
     void createUser_WithValidData_ShouldReturn201() throws Exception {
         UserRequestDto request = new UserRequestDto("Juan Pérez", "jperez", "123456");
         UUID userId = UUID.randomUUID();
@@ -80,6 +82,7 @@ class UserControllerTest {
     }
 
     @Test
+    @WithMockUser
     void createUser_WithInvalidData_ShouldReturn400() throws Exception {
         UserRequestDto invalidRequest = new UserRequestDto("", "jp", "123");
 
@@ -113,6 +116,7 @@ class UserControllerTest {
     }
 
     @Test
+    @WithMockUser
     void updateUser_WithValidIdAndBody_ShouldReturn200() throws Exception {
         UUID id = UUID.randomUUID();
         UserRequestDto request = new UserRequestDto("Juan Actualizado", "jupdated", "newpass123");
@@ -130,6 +134,7 @@ class UserControllerTest {
     }
 
     @Test
+    @WithMockUser
     void updateUser_WithNonExistentId_ShouldReturn404() throws Exception {
         UUID id = UUID.randomUUID();
         UserRequestDto request = new UserRequestDto("Juan", "juanv", "123456");
@@ -144,6 +149,7 @@ class UserControllerTest {
     }
 
     @Test
+    @WithMockUser
     void deleteUser_WithExistingId_ShouldReturn204() throws Exception {
         UUID id = UUID.randomUUID();
         
@@ -152,6 +158,7 @@ class UserControllerTest {
     }
 
     @Test
+    @WithMockUser
     void deleteUser_WithNonExistentId_ShouldReturn404() throws Exception {
         UUID id = UUID.randomUUID();
         doThrow(new ResourceNotFoundException("User not found with id: " + id))

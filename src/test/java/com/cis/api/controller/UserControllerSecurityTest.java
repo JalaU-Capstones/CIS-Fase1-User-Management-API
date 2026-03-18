@@ -84,7 +84,7 @@ class UserControllerSecurityTest {
 
         mockMvc.perform(put("/api/v1/users/" + id)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Test\",\"login\":\"test\"}"))
+                        .content("{\"name\":\"Test\",\"login\":\"test\",\"password\":\"password123\"}"))
                 .andExpect(status().isOk());
     }
 
