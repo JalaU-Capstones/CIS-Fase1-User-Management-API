@@ -10,10 +10,11 @@ import com.cis.api.security.JwtService;
 import com.cis.api.service.CustomUserDetailsService;
 import com.cis.api.service.UserService;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
@@ -39,14 +40,20 @@ class UserControllerSecurityTest {
 
     @TestConfiguration
     static class TestConfig {
-        @MockBean
-        private UserService userService;
+        @Bean
+        public UserService userService() {
+            return Mockito.mock(UserService.class);
+        }
 
-        @MockBean
-        private JwtService jwtService;
+        @Bean
+        public JwtService jwtService() {
+            return Mockito.mock(JwtService.class);
+        }
 
-        @MockBean
-        private CustomUserDetailsService customUserDetailsService;
+        @Bean
+        public CustomUserDetailsService customUserDetailsService() {
+            return Mockito.mock(CustomUserDetailsService.class);
+        }
     }
 
     @Test

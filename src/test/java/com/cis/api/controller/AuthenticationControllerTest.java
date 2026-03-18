@@ -10,10 +10,10 @@ import com.cis.api.security.JwtService;
 import com.cis.api.service.AuthenticationService;
 import com.cis.api.service.CustomUserDetailsService;
 import org.junit.jupiter.api.Test;
+import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -36,14 +36,20 @@ class AuthenticationControllerTest {
 
     @TestConfiguration
     static class TestConfig {
-        @MockBean
-        private AuthenticationService authenticationService;
+        @Bean
+        public AuthenticationService authenticationService() {
+            return Mockito.mock(AuthenticationService.class);
+        }
 
-        @MockBean
-        private JwtService jwtService;
+        @Bean
+        public JwtService jwtService() {
+            return Mockito.mock(JwtService.class);
+        }
 
-        @MockBean
-        private CustomUserDetailsService customUserDetailsService;
+        @Bean
+        public CustomUserDetailsService customUserDetailsService() {
+            return Mockito.mock(CustomUserDetailsService.class);
+        }
     }
 
     @Test
