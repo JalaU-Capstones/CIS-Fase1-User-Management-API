@@ -12,7 +12,9 @@ import com.cis.api.service.CustomUserDetailsService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
@@ -29,14 +31,20 @@ class AuthenticationControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @Autowired
     private AuthenticationService authenticationService;
 
-    @MockBean
-    private JwtService jwtService;
+    @TestConfiguration
+    static class TestConfig {
+        @MockBean
+        private AuthenticationService authenticationService;
 
-    @MockBean
-    private CustomUserDetailsService customUserDetailsService;
+        @MockBean
+        private JwtService jwtService;
+
+        @MockBean
+        private CustomUserDetailsService customUserDetailsService;
+    }
 
     @Test
     void shouldReturnTokenOnValidLogin() throws Exception {

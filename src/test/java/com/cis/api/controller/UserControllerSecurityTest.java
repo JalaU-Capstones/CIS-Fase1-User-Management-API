@@ -12,6 +12,7 @@ import com.cis.api.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
@@ -33,14 +34,20 @@ class UserControllerSecurityTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @MockBean
+    @Autowired
     private UserService userService;
 
-    @MockBean
-    private JwtService jwtService;
+    @TestConfiguration
+    static class TestConfig {
+        @MockBean
+        private UserService userService;
 
-    @MockBean
-    private CustomUserDetailsService customUserDetailsService;
+        @MockBean
+        private JwtService jwtService;
+
+        @MockBean
+        private CustomUserDetailsService customUserDetailsService;
+    }
 
     @Test
     void shouldAllowPublicAccessToGetAllUsers() throws Exception {
