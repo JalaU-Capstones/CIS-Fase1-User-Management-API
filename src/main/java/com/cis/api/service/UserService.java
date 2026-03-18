@@ -1,8 +1,8 @@
 package com.cis.api.service;
 
-import com.cis.api.dto.UserCreateRequest;
+import com.cis.api.dto.UserMapper;
+import com.cis.api.dto.UserRequestDto;
 import com.cis.api.dto.UserResponseDto;
-import com.cis.api.dto.UserUpdateRequest;
 import com.cis.api.exception.ResourceNotFoundException;
 import com.cis.api.model.User;
 import com.cis.api.repository.UserRepository;
@@ -13,12 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
-import java.util.stream.Collectors;
 
-/**
- * Service layer for User-related business logic.
- * Encapsulates operations and converts entities to DTOs.
- */
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -26,88 +21,49 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final UserMapper userMapper;
 
-    /**
-     * Retrieves all users from the database and converts them to DTOs.
-     * Ensures passwords are not exposed.
-     *
-     * @return List of UserResponseDto
-     */
     public List<UserResponseDto> getAllUsers() {
         return userRepository.findAll().stream()
-                .map(this::mapToDto)
-                .collect(Collectors.toList());
-    }
-    
-    /**
-     * Retrieves a specific user by ID.
-     * US 1.1.2: Retrieve specific user by ID.
-     *
-     * @param id UUID of the user
-     * @return UserResponseDto if found
-     * @throws ResourceNotFoundException if user not found
-     */
-    public UserResponseDto getUserById(String id) {
-        UUID uuid = UUID.fromString(id);
-        User user = userRepository.findById(uuid)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
-        return mapToDto(user);
+                .map(userMapper::toDto)
+                .toList();
     }
 
-    /**
-     * Creates a new user.
-     * @param request DTO with user creation data
-     * @return DTO of the created user
-     */
+    public UserResponseDto getUserById(String id) {
+        return userRepository.findById(UUID.fromString(id))
+                .map(userMapper::toDto)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+    }
+
     @Transactional
-    public UserResponseDto createUser(UserCreateRequest request) {
-        if (userRepository.existsByLogin(request.getLogin())) {
-            throw new RuntimeException("Login already exists: " + request.getLogin());
-        }
+    public UserResponseDto createUser(UserRequestDto request) {
+        validateLoginUniqueness(request.login());
+
         User user = new User();
         user.setId(UUID.randomUUID());
-        user.setName(request.getName());
-        user.setLogin(request.getLogin());
-        user.setPassword(passwordEncoder.encode(request.getPassword())); // Encode password
-        User savedUser = userRepository.save(user);
-        return mapToDto(savedUser);
+        userMapper.updateUserFromDto(request, user);
+        user.setPassword(passwordEncoder.encode(request.password()));
+
+        return userMapper.toDto(userRepository.save(user));
     }
 
-    /**
-     * Updates an existing user.
-     * @param id User ID
-     * @param request DTO with user update data
-     * @return DTO of the updated user
-     */
     @Transactional
-    public UserResponseDto updateUser(String id, UserUpdateRequest request) {
+    public UserResponseDto updateUser(String id, UserRequestDto request) {
         UUID uuid = UUID.fromString(id);
-        User user = userRepository.findById(uuid)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
-        
-        if (request.getLogin() != null && !user.getLogin().equals(request.getLogin())
-                && userRepository.existsByLoginAndIdNot(request.getLogin(), uuid)) {
-            throw new RuntimeException("Login already exists: " + request.getLogin());
+        User user = findUserById(uuid);
+
+        if (!user.getLogin().equals(request.login())) {
+            validateLoginUniqueness(request.login(), uuid);
         }
 
-        if (request.getName() != null) {
-            user.setName(request.getName());
-        }
-        if (request.getLogin() != null) {
-            user.setLogin(request.getLogin());
-        }
-        if (request.getPassword() != null) {
-            user.setPassword(passwordEncoder.encode(request.getPassword()));
+        userMapper.updateUserFromDto(request, user);
+        if (request.password() != null && !request.password().isBlank()) {
+            user.setPassword(passwordEncoder.encode(request.password()));
         }
 
-        User updatedUser = userRepository.save(user);
-        return mapToDto(updatedUser);
+        return userMapper.toDto(userRepository.save(user));
     }
 
-    /**
-     * Deletes a user by ID.
-     * @param id User ID
-     */
     @Transactional
     public void deleteUser(String id) {
         UUID uuid = UUID.fromString(id);
@@ -117,11 +73,20 @@ public class UserService {
         userRepository.deleteById(uuid);
     }
 
-    private UserResponseDto mapToDto(User user) {
-        return new UserResponseDto(
-            user.getId(),
-            user.getName(),
-            user.getLogin()
-        );
+    private User findUserById(UUID id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+    }
+
+    private void validateLoginUniqueness(String login) {
+        if (userRepository.existsByLogin(login)) {
+            throw new IllegalArgumentException("Login already exists: " + login);
+        }
+    }
+
+    private void validateLoginUniqueness(String login, UUID userId) {
+        if (userRepository.existsByLoginAndIdNot(login, userId)) {
+            throw new IllegalArgumentException("Login already exists: " + login);
+        }
     }
 }

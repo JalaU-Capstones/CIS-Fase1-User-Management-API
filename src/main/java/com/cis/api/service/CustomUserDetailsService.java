@@ -10,9 +10,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 
-/**
- * Custom implementation of UserDetailsService to load user data from our database.
- */
 @Service
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {
@@ -21,14 +18,13 @@ public class CustomUserDetailsService implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // Our 'login' field corresponds to 'username' in Spring Security
         User user = userRepository.findByLogin(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
 
         return new org.springframework.security.core.userdetails.User(
                 user.getLogin(),
-                user.getPassword(), // This should be encoded
-                Collections.emptyList() // No roles/authorities for Phase 1
+                user.getPassword(),
+                Collections.emptyList()
         );
     }
 }

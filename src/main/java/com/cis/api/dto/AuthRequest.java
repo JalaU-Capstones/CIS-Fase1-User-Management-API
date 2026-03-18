@@ -1,20 +1,11 @@
 package com.cis.api.dto;
 
 import jakarta.validation.constraints.NotBlank;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
 
-/**
- * DTO for authentication requests.
- */
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-public class AuthRequest {
+public record AuthRequest(
     @NotBlank(message = "Login is required")
-    private String login;
+    String login,
 
     @NotBlank(message = "Password is required")
-    private String password;
-}
+    String password
+) {}

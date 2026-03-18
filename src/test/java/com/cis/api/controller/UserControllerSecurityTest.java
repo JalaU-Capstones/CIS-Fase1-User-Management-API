@@ -1,17 +1,20 @@
 package com.cis.api.controller;
 
+import com.cis.api.config.ApplicationConfig;
 import com.cis.api.config.SecurityConfig;
-import com.cis.api.dto.UserCreateRequest;
+import com.cis.api.dto.UserRequestDto;
 import com.cis.api.dto.UserResponseDto;
-import com.cis.api.dto.UserUpdateRequest;
+import com.cis.api.security.JwtAuthenticationFilter;
+import com.cis.api.security.JwtService;
+import com.cis.api.service.CustomUserDetailsService;
 import com.cis.api.service.UserService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
-import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.util.UUID;
@@ -19,25 +22,24 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(UserController.class)
-@Import(SecurityConfig.class)
+@Import({SecurityConfig.class, ApplicationConfig.class, JwtAuthenticationFilter.class})
 class UserControllerSecurityTest {
 
     @Autowired
     private MockMvc mockMvc;
 
-    @MockitoBean
+    @MockBean
     private UserService userService;
 
-    // We need to mock these beans because they are required by SecurityConfig
-    @MockitoBean
-    private com.cis.api.security.JwtService jwtService;
-    @MockitoBean
-    private com.cis.api.service.CustomUserDetailsService customUserDetailsService;
+    @MockBean
+    private JwtService jwtService;
+
+    @MockBean
+    private CustomUserDetailsService customUserDetailsService;
 
     @Test
     void shouldAllowPublicAccessToGetAllUsers() throws Exception {
@@ -49,21 +51,19 @@ class UserControllerSecurityTest {
     void shouldDenyUnauthenticatedAccessToCreateUser() throws Exception {
         mockMvc.perform(post("/api/v1/users")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}")
-                        .with(csrf()))
-                .andExpect(status().isForbidden()); // Or 401 depending on how filter chain is hit
+                        .content("{}"))
+                .andExpect(status().isForbidden());
     }
 
     @Test
     @WithMockUser
     void shouldAllowAuthenticatedAccessToCreateUser() throws Exception {
         UserResponseDto response = new UserResponseDto(UUID.randomUUID(), "Test", "test");
-        given(userService.createUser(any(UserCreateRequest.class))).willReturn(response);
+        given(userService.createUser(any(UserRequestDto.class))).willReturn(response);
 
         mockMvc.perform(post("/api/v1/users")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Test\",\"login\":\"test\",\"password\":\"password123\"}")
-                        .with(csrf()))
+                        .content("{\"name\":\"Test\",\"login\":\"test\",\"password\":\"password123\"}"))
                 .andExpect(status().isCreated());
     }
 
@@ -71,8 +71,7 @@ class UserControllerSecurityTest {
     void shouldDenyUnauthenticatedAccessToUpdateUser() throws Exception {
         mockMvc.perform(put("/api/v1/users/" + UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}")
-                        .with(csrf()))
+                        .content("{}"))
                 .andExpect(status().isForbidden());
     }
 
@@ -81,19 +80,17 @@ class UserControllerSecurityTest {
     void shouldAllowAuthenticatedAccessToUpdateUser() throws Exception {
         UUID id = UUID.randomUUID();
         UserResponseDto response = new UserResponseDto(id, "Test", "test");
-        given(userService.updateUser(eq(id.toString()), any(UserUpdateRequest.class))).willReturn(response);
+        given(userService.updateUser(eq(id.toString()), any(UserRequestDto.class))).willReturn(response);
 
         mockMvc.perform(put("/api/v1/users/" + id)
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Test\"}")
-                        .with(csrf()))
+                        .content("{\"name\":\"Test\",\"login\":\"test\"}"))
                 .andExpect(status().isOk());
     }
 
     @Test
     void shouldDenyUnauthenticatedAccessToDeleteUser() throws Exception {
-        mockMvc.perform(delete("/api/v1/users/" + UUID.randomUUID())
-                        .with(csrf()))
+        mockMvc.perform(delete("/api/v1/users/" + UUID.randomUUID()))
                 .andExpect(status().isForbidden());
     }
 
@@ -101,8 +98,7 @@ class UserControllerSecurityTest {
     @WithMockUser
     void shouldAllowAuthenticatedAccessToDeleteUser() throws Exception {
         UUID id = UUID.randomUUID();
-        mockMvc.perform(delete("/api/v1/users/" + id)
-                        .with(csrf()))
+        mockMvc.perform(delete("/api/v1/users/" + id))
                 .andExpect(status().isNoContent());
     }
 }

@@ -10,9 +10,6 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
-/**
- * Service to handle authentication requests.
- */
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService {
@@ -21,20 +18,15 @@ public class AuthenticationService {
     private final UserDetailsService userDetailsService;
     private final JwtService jwtService;
 
-    /**
-     * Authenticates a user and returns a JWT token.
-     * @param request AuthRequest containing login and password
-     * @return AuthResponse with JWT token
-     */
     public AuthResponse authenticate(AuthRequest request) {
         authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(
-                        request.getLogin(),
-                        request.getPassword()
+                        request.login(),
+                        request.password()
                 )
         );
 
-        UserDetails userDetails = userDetailsService.loadUserByUsername(request.getLogin());
+        UserDetails userDetails = userDetailsService.loadUserByUsername(request.login());
         String jwtToken = jwtService.generateToken(userDetails);
 
         return AuthResponse.builder()

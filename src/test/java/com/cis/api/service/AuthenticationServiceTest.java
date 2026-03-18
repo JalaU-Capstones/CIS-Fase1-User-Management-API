@@ -3,7 +3,6 @@ package com.cis.api.service;
 import com.cis.api.dto.AuthRequest;
 import com.cis.api.dto.AuthResponse;
 import com.cis.api.security.JwtService;
-import com.cis.api.repository.UserRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -37,19 +36,16 @@ class AuthenticationServiceTest {
 
     @Test
     void shouldAuthenticateAndReturnToken() {
-        // given
         AuthRequest request = new AuthRequest("user", "pass");
         UserDetails userDetails = mock(UserDetails.class);
         
         given(userDetailsService.loadUserByUsername("user")).willReturn(userDetails);
         given(jwtService.generateToken(userDetails)).willReturn("jwt-token");
 
-        // when
         AuthResponse response = authenticationService.authenticate(request);
 
-        // then
         assertThat(response).isNotNull();
-        assertThat(response.getToken()).isEqualTo("jwt-token");
+        assertThat(response.token()).isEqualTo("jwt-token");
         then(authenticationManager).should().authenticate(any(UsernamePasswordAuthenticationToken.class));
     }
 }
