@@ -57,11 +57,35 @@ The API will be available at `http://localhost:8080`.
 
 ## 5. Testing the API
 
-The API uses JWT Bearer Token Authentication. Read operations (GET) are public, but write operations (POST, PUT, DELETE) require a valid token.
+The API uses JWT Bearer Token Authentication. Read operations (GET) and creating the first user are public, but other write operations (PUT, DELETE) require a valid token.
 
-### 5.1. POST /api/v1/auth/login (Public)
+### 5.1. POST /api/v1/users (Public)
 
-Authenticate to receive a JWT token. You must use valid credentials from the database.
+Create the first user. This endpoint is public.
+
+**Request:**
+```bash
+curl -X POST http://localhost:8080/api/v1/users \
+     -H "Content-Type: application/json" \
+     -d '{
+           "name": "Test User",
+           "login": "testuser",
+           "password": "password123"
+         }'
+```
+
+**Expected Response (201 Created):**
+```json
+{
+  "id": "generated-uuid",
+  "name": "Test User",
+  "login": "testuser"
+}
+```
+
+### 5.2. POST /api/v1/auth/login (Public)
+
+Authenticate to receive a JWT token.
 
 **Request:**
 ```bash
@@ -69,7 +93,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
      -H "Content-Type: application/json" \
      -d '{
            "login": "testuser",
-           "password": "test123"
+           "password": "password123"
          }'
 ```
 
@@ -82,7 +106,7 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 
 **Note:** Copy this token for subsequent requests.
 
-### 5.2. GET /api/v1/users (Public)
+### 5.3. GET /api/v1/users (Public)
 
 Retrieve all users (password field is excluded).
 
@@ -102,39 +126,12 @@ curl -v http://localhost:8080/api/v1/users
 ]
 ```
 
-### 5.3. GET /api/v1/users/{id} (Public)
+### 5.4. GET /api/v1/users/{id} (Public)
 Retrieve a specific user by ID.
 
 **Request:**
 ```bash
 curl http://localhost:8080/api/v1/users/550e8400-e29b-41d4-a716-446655440000
-```
-
-### 5.4. POST /api/v1/users (Protected)
-
-Create a new user. Requires Bearer Token.
-
-**Request:**
-```bash
-TOKEN="your_jwt_token_here"
-
-curl -X POST http://localhost:8080/api/v1/users \
-     -H "Authorization: Bearer $TOKEN" \
-     -H "Content-Type: application/json" \
-     -d '{
-           "name": "New Employee",
-           "login": "newemp",
-           "password": "securepass"
-         }'
-```
-
-**Expected Response (201 Created):**
-```json
-{
-  "id": "generated-uuid",
-  "name": "New Employee",
-  "login": "newemp"
-}
 ```
 
 ### 5.5. PUT /api/v1/users/{id} (Protected)
@@ -187,7 +184,7 @@ curl -X DELETE http://localhost:8080/api/v1/users/$USER_ID \
 
 ## 7. Common Issues & Warnings
 
-- **403 Forbidden**: If you get this on POST/PUT/DELETE, check your Authorization header format (`Bearer <token>`) and ensure the token is not expired.
+- **403 Forbidden**: If you get this on PUT/DELETE, check your Authorization header format (`Bearer <token>`) and ensure the token is not expired.
 - **Port Conflict**: If port 8080 is in use, modify `server.port` in `application.properties`.
 - **Database Connection**: Ensure the Docker container is running before starting the app.
 - **Deprecation Warnings**: We use `@MockitoBean` in tests to align with Spring Boot 3.4+.
