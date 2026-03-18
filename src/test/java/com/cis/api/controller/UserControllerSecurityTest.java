@@ -4,6 +4,7 @@ import com.cis.api.config.ApplicationConfig;
 import com.cis.api.config.SecurityConfig;
 import com.cis.api.dto.UserRequestDto;
 import com.cis.api.dto.UserResponseDto;
+import com.cis.api.exception.CustomAuthenticationEntryPoint;
 import com.cis.api.security.JwtAuthenticationFilter;
 import com.cis.api.security.JwtService;
 import com.cis.api.service.CustomUserDetailsService;
@@ -26,7 +27,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(UserController.class)
-@Import({SecurityConfig.class, ApplicationConfig.class, JwtAuthenticationFilter.class})
+@Import({SecurityConfig.class, ApplicationConfig.class, JwtAuthenticationFilter.class, CustomAuthenticationEntryPoint.class})
 class UserControllerSecurityTest {
 
     @Autowired
