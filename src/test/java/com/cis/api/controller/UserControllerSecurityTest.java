@@ -49,16 +49,15 @@ class UserControllerSecurityTest {
     }
 
     @Test
-    void shouldDenyUnauthenticatedAccessToCreateUser() throws Exception {
+    void shouldReturnBadRequestWhenCreatingUserWithEmptyBody() throws Exception {
         mockMvc.perform(post("/api/v1/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isBadRequest());
     }
 
     @Test
-    @WithMockUser
-    void shouldAllowAuthenticatedAccessToCreateUser() throws Exception {
+    void shouldAllowPublicAccessToCreateUser() throws Exception {
         UserResponseDto response = new UserResponseDto(UUID.randomUUID(), "Test", "test");
         given(userService.createUser(any(UserRequestDto.class))).willReturn(response);
 
@@ -73,7 +72,7 @@ class UserControllerSecurityTest {
         mockMvc.perform(put("/api/v1/users/" + UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
@@ -92,7 +91,7 @@ class UserControllerSecurityTest {
     @Test
     void shouldDenyUnauthenticatedAccessToDeleteUser() throws Exception {
         mockMvc.perform(delete("/api/v1/users/" + UUID.randomUUID()))
-                .andExpect(status().isForbidden());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
