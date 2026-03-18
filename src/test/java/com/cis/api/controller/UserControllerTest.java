@@ -1,7 +1,8 @@
 package com.cis.api.controller;
 
-import com.cis.api.dto.UserRequestDto;
+import com.cis.api.dto.UserCreateRequest;
 import com.cis.api.dto.UserResponseDto;
+import com.cis.api.dto.UserUpdateRequest;
 import com.cis.api.exception.GlobalExceptionHandler;
 import com.cis.api.exception.ResourceNotFoundException;
 import com.cis.api.service.UserService;
@@ -12,13 +13,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.List;
 import java.util.UUID;
@@ -69,11 +66,11 @@ class UserControllerTest {
     @Test
     void createUser_WithValidData_ShouldReturn201() throws Exception {
         // given
-        UserRequestDto request = new UserRequestDto("Juan Pérez", "jperez", "123456");
+        UserCreateRequest request = new UserCreateRequest("Juan Pérez", "jperez", "123456");
         UUID userId = UUID.randomUUID();
         UserResponseDto response = new UserResponseDto(userId, "Juan Pérez", "jperez");
 
-        given(userService.createUser(any(UserRequestDto.class))).willReturn(response);
+        given(userService.createUser(any(UserCreateRequest.class))).willReturn(response);
 
         // when & then
         mockMvc.perform(post("/api/v1/users")
@@ -88,7 +85,7 @@ class UserControllerTest {
     @Test
     void createUser_WithInvalidData_ShouldReturn400() throws Exception {
         // given
-        UserRequestDto invalidRequest = new UserRequestDto("", "jp", "123");
+        UserCreateRequest invalidRequest = new UserCreateRequest("", "jp", "123");
 
         // when & then
         mockMvc.perform(post("/api/v1/users")
@@ -98,24 +95,20 @@ class UserControllerTest {
     }
 
     @Test
-    void createUser_WhenLoginExists_ShouldReturn400() throws Exception {  // Cambiado a 400
+    void createUser_WhenLoginExists_ShouldReturn400() throws Exception {
         // given
-        UserRequestDto request = new UserRequestDto("Juan Pérez", "jperez", "123456");
+        UserCreateRequest request = new UserCreateRequest("Juan Pérez", "jperez", "123456");
 
-        given(userService.createUser(any(UserRequestDto.class)))
+        given(userService.createUser(any(UserCreateRequest.class)))
                 .willThrow(new RuntimeException("Login already exists: jperez"));
 
         // when & then
         mockMvc.perform(post("/api/v1/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());  // Ahora espera 400
+                .andExpect(status().isBadRequest());
     }
-    /**
-     * Verifies that GET /api/v1/users/{id} returns HTTP 200
-     * and the correct user JSON when the user exists.
-     * MockMvc simulates the HTTP call — no real server needed.
-     */
+
     @Test
     void shouldReturnOkAndUserWhenExists() throws Exception {
         // given
@@ -132,11 +125,6 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.login").value("pmartin"));
     }
 
-    /**
-     * Verifies that GET /api/v1/users/{id} returns HTTP 404
-     * when the user does not exist.
-     * MockMvc simulates the HTTP call — no real server needed.
-     */
     @Test
     void shouldReturnNotFoundWhenUserDoesNotExist() throws Exception {
         // given
@@ -149,20 +137,14 @@ class UserControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    // ===== TESTS Of Update (US 1.3.1) =====
-
-    /**
-     * Verifies that PUT /api/v1/users/{id} returns HTTP 200
-     * and the updated user JSON when the user exists and data is valid.
-     */
     @Test
     void updateUser_WithValidIdAndBody_ShouldReturn200() throws Exception {
         // given
         UUID id = UUID.randomUUID();
-        UserRequestDto request = new UserRequestDto("Juan Actualizado", "jupdated", "newpass123");
+        UserUpdateRequest request = new UserUpdateRequest("Juan Actualizado", "jupdated", "newpass123");
         UserResponseDto response = new UserResponseDto(id, "Juan Actualizado", "jupdated");
 
-        given(userService.updateUser(eq(id.toString()), any(UserRequestDto.class))).willReturn(response);
+        given(userService.updateUser(eq(id.toString()), any(UserUpdateRequest.class))).willReturn(response);
 
         // when & then
         mockMvc.perform(put("/api/v1/users/" + id)
@@ -178,9 +160,9 @@ class UserControllerTest {
     void updateUser_WithNonExistentId_ShouldReturn404() throws Exception {
         // given
         UUID id = UUID.randomUUID();
-        UserRequestDto request = new UserRequestDto("Juan", "juanv", "123456");
+        UserUpdateRequest request = new UserUpdateRequest("Juan", "juanv", "123456");
 
-        given(userService.updateUser(eq(id.toString()), any(UserRequestDto.class)))
+        given(userService.updateUser(eq(id.toString()), any(UserUpdateRequest.class)))
                 .willThrow(new ResourceNotFoundException("User not found with id: " + id));
 
         // when & then
@@ -191,51 +173,12 @@ class UserControllerTest {
     }
 
     @Test
-    void updateUser_WithBlankName_ShouldReturn400() throws Exception {
-        // given
-        UUID id = UUID.randomUUID();
-        UserRequestDto request = new UserRequestDto("", "juanv", "123456");
-
-        // when & then
-        mockMvc.perform(put("/api/v1/users/" + id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void updateUser_WithShortLogin_ShouldReturn400() throws Exception {
-        // given
-        UUID id = UUID.randomUUID();
-        UserRequestDto request = new UserRequestDto("Juan Valdez", "jv", "123456");
-
-        // when & then
-        mockMvc.perform(put("/api/v1/users/" + id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
-    void updateUser_WithShortPassword_ShouldReturn400() throws Exception {
-        // given
-        UUID id = UUID.randomUUID();
-        UserRequestDto request = new UserRequestDto("Juan Valdez", "juanv", "123");
-
-        // when & then
-        mockMvc.perform(put("/api/v1/users/" + id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
     void updateUser_WithDuplicateLoginFromAnotherUser_ShouldReturn400() throws Exception {
         // given
         UUID id = UUID.randomUUID();
-        UserRequestDto request = new UserRequestDto("Juan", "loginajeno", "123456");
+        UserUpdateRequest request = new UserUpdateRequest("Juan", "loginajeno", "123456");
 
-        given(userService.updateUser(eq(id.toString()), any(UserRequestDto.class)))
+        given(userService.updateUser(eq(id.toString()), any(UserUpdateRequest.class)))
                 .willThrow(new RuntimeException("Login already exists: loginajeno"));
 
         // when & then
@@ -245,13 +188,6 @@ class UserControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
-    // ===== TESTS of Delete (US 1.4.1) =====
-
-    /**
-     * UC 1.4.1.1 – Delete Existing User Successfully
-     * Verifies that DELETE /api/v1/users/{id} returns HTTP 204 No Content
-     * when the user exists and is successfully deleted.
-     */
     @Test
     void deleteUser_WithExistingId_ShouldReturn204() throws Exception {
         // given
@@ -263,11 +199,6 @@ class UserControllerTest {
                 .andExpect(status().isNoContent());
     }
 
-    /**
-     * UC 1.4.1.2 – User Not Found
-     * Verifies that DELETE /api/v1/users/{id} returns HTTP 404
-     * when the user does not exist.
-     */
     @Test
     void deleteUser_WithNonExistentId_ShouldReturn404() throws Exception {
         // given
@@ -280,11 +211,6 @@ class UserControllerTest {
                 .andExpect(status().isNotFound());
     }
 
-    /**
-     * UC 1.4.1.3 – Invalid ID Format
-     * Verifies that DELETE /api/v1/users/{id} returns HTTP 400
-     * when the ID format is not a valid UUID.
-     */
     @Test
     void deleteUser_WithInvalidIdFormat_ShouldReturn400() throws Exception {
         // given

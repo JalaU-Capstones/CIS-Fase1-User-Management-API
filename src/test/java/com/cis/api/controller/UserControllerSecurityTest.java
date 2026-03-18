@@ -81,7 +81,7 @@ class UserControllerSecurityTest {
     void shouldAllowAuthenticatedAccessToUpdateUser() throws Exception {
         UUID id = UUID.randomUUID();
         UserResponseDto response = new UserResponseDto(id, "Test", "test");
-        given(userService.updateUser(eq(id), any(UserUpdateRequest.class))).willReturn(response);
+        given(userService.updateUser(eq(id.toString()), any(UserUpdateRequest.class))).willReturn(response);
 
         mockMvc.perform(put("/api/v1/users/" + id)
                         .contentType(MediaType.APPLICATION_JSON)
