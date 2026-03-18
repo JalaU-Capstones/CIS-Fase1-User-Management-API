@@ -1,7 +1,8 @@
 package com.cis.api.controller;
 
-import com.cis.api.dto.UserRequestDto;
+import com.cis.api.dto.UserCreateRequest;
 import com.cis.api.dto.UserResponseDto;
+import com.cis.api.dto.UserUpdateRequest;
 import com.cis.api.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,7 @@ import java.util.List;
 
 /**
  * REST Controller for User Management API.
- * Provides endpoints for accessing and managing user data.
+ * Provides endpoints for accessing user data.
  */
 @RestController
 @RequestMapping("/api/v1/users")
@@ -34,11 +35,11 @@ public class UserController {
     }
 
     /**
-     * Retrieves a specific user by ID.
+     * Retrieves a user by ID.
      * US 1.1.2: Retrieve specific user by ID.
      *
-     * @param id UUID of the user
-     * @return 200 OK with UserResponseDto if found, 404 if not found
+     * @param id User ID
+     * @return 200 OK with UserResponseDto
      */
     @GetMapping("/{id}")
     public ResponseEntity<UserResponseDto> getUserById(@PathVariable String id) {
@@ -48,38 +49,37 @@ public class UserController {
     /**
      * Creates a new user.
      * US 1.2.1: Create a new user.
+     * Requires Authentication.
      *
-     * @param userRequest The user data from the request body
-     * @return 201 Created with the created user data (no password)
+     * @param request User creation data
+     * @return 201 Created with UserResponseDto
      */
     @PostMapping
-    public ResponseEntity<UserResponseDto> createUser(@Valid @RequestBody UserRequestDto userRequest) {
-        UserResponseDto createdUser = userService.createUser(userRequest);
-        return new ResponseEntity<>(createdUser, HttpStatus.CREATED);
+    public ResponseEntity<UserResponseDto> createUser(@RequestBody @Valid UserCreateRequest request) {
+        return new ResponseEntity<>(userService.createUser(request), HttpStatus.CREATED);
     }
 
     /**
-     * Updates an existing user by ID.
+     * Updates an existing user.
      * US 1.3.1: Update a user by ID.
+     * Requires Authentication.
      *
-     * @param id          UUID of the user
-     * @param userRequest The updated user data
-     * @return 200 OK with updated UserResponseDto, or 404 if not found
+     * @param id User ID
+     * @param request User update data
+     * @return 200 OK with UserResponseDto
      */
     @PutMapping("/{id}")
-    public ResponseEntity<UserResponseDto> updateUser(
-            @PathVariable String id,
-            @Valid @RequestBody UserRequestDto userRequest) {
-        UserResponseDto updatedUser = userService.updateUser(id, userRequest);
-        return ResponseEntity.ok(updatedUser);
+    public ResponseEntity<UserResponseDto> updateUser(@PathVariable String id, @RequestBody @Valid UserUpdateRequest request) {
+        return ResponseEntity.ok(userService.updateUser(id, request));
     }
 
     /**
-     * Deletes a user by ID
-     * US 1.4.1: Delete a user by ID
+     * Deletes a user by ID.
+     * US 1.4.1: Delete a user by ID.
+     * Requires Authentication.
      *
-     * @param id UUID of the user
-     * @return 204 No Content if deleted, 404 if not found
+     * @param id User ID
+     * @return 204 No Content
      */
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteUser(@PathVariable String id) {

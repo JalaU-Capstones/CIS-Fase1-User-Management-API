@@ -50,16 +50,39 @@ Alternatively, build the JAR and run it:
 
 ```bash
 ./mvnw clean package -DskipTests
-java -jar target/cis-user-management-api-0.0.1-SNAPSHOT.jar
+java -jar target/user-management-api-0.0.1-SNAPSHOT.jar
 ```
 
 The API will be available at `http://localhost:8080`.
 
 ## 5. Testing the API
 
-The current implementation supports retrieving a list of users.
+The API uses JWT Bearer Token Authentication. Read operations (GET) are public, but write operations (POST, PUT, DELETE) require a valid token.
 
-### GET /api/v1/users
+### 5.1. POST /api/v1/auth/login (Public)
+
+Authenticate to receive a JWT token. You must use valid credentials from the database.
+
+**Request:**
+```bash
+curl -X POST http://localhost:8080/api/v1/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{
+           "login": "testuser",
+           "password": "test123"
+         }'
+```
+
+**Expected Response (200 OK):**
+```json
+{
+  "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0dXNlciIsImV4cCI6MTcx..."
+}
+```
+
+**Note:** Copy this token for subsequent requests.
+
+### 5.2. GET /api/v1/users (Public)
 
 Retrieve all users (password field is excluded).
 
@@ -79,41 +102,83 @@ curl -v http://localhost:8080/api/v1/users
 ]
 ```
 
-### GET /api/v1/users/{id}
-Retrieve a specific user by ID (password field is excluded).
-
-**Authentication:** Not required (public read).
+### 5.3. GET /api/v1/users/{id} (Public)
+Retrieve a specific user by ID.
 
 **Request:**
 ```bash
-curl http://localhost:8080/api/v1/users/{id}
+curl http://localhost:8080/api/v1/users/550e8400-e29b-41d4-a716-446655440000
 ```
 
-**Example:**
+### 5.4. POST /api/v1/users (Protected)
+
+Create a new user. Requires Bearer Token.
+
+**Request:**
 ```bash
-curl http://localhost:8080/api/v1/users/550e8400-e29b-41d4-a716-446655440000
+TOKEN="your_jwt_token_here"
+
+curl -X POST http://localhost:8080/api/v1/users \
+     -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+           "name": "New Employee",
+           "login": "newemp",
+           "password": "securepass"
+         }'
+```
+
+**Expected Response (201 Created):**
+```json
+{
+  "id": "generated-uuid",
+  "name": "New Employee",
+  "login": "newemp"
+}
+```
+
+### 5.5. PUT /api/v1/users/{id} (Protected)
+
+Update an existing user. Requires Bearer Token.
+
+**Request:**
+```bash
+TOKEN="your_jwt_token_here"
+USER_ID="550e8400-e29b-41d4-a716-446655440000"
+
+curl -X PUT http://localhost:8080/api/v1/users/$USER_ID \
+     -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+           "name": "Updated Name",
+           "login": "updatedlogin",
+           "password": "newpassword"
+         }'
 ```
 
 **Expected Response (200 OK):**
 ```json
 {
   "id": "550e8400-e29b-41d4-a716-446655440000",
-  "name": "Test User",
-  "login": "testuser"
+  "name": "Updated Name",
+  "login": "updatedlogin"
 }
 ```
 
-**Expected Response (404 Not Found):**
-```json
-{
-  "status": 404,
-  "message": "User not found with id: 550e8400-e29b-41d4-a716-446655440000"
-}
+### 5.6. DELETE /api/v1/users/{id} (Protected)
+
+Delete a user. Requires Bearer Token.
+
+**Request:**
+```bash
+TOKEN="your_jwt_token_here"
+USER_ID="550e8400-e29b-41d4-a716-446655440000"
+
+curl -X DELETE http://localhost:8080/api/v1/users/$USER_ID \
+     -H "Authorization: Bearer $TOKEN"
 ```
 
-**Notes:**
-- The `id` must be a valid UUID format.
-- The `password` field is never returned in the response.
+**Expected Response (204 No Content)**
 
 ## 6. Profiles
 
@@ -122,9 +187,10 @@ curl http://localhost:8080/api/v1/users/550e8400-e29b-41d4-a716-446655440000
 
 ## 7. Common Issues & Warnings
 
-- **Port Conflict**: If port 8080 is in use, modify `server.port` in `application.properties` or stop the conflicting service.
+- **403 Forbidden**: If you get this on POST/PUT/DELETE, check your Authorization header format (`Bearer <token>`) and ensure the token is not expired.
+- **Port Conflict**: If port 8080 is in use, modify `server.port` in `application.properties`.
 - **Database Connection**: Ensure the Docker container is running before starting the app.
-- **Deprecation Warnings**: We have replaced `@MockBean` with `@MockitoBean` (Spring Boot 3.4+) in tests. Ensure you use the updated annotations when writing new tests.
+- **Deprecation Warnings**: We use `@MockitoBean` in tests to align with Spring Boot 3.4+.
 
 ## 8. Running Tests
 

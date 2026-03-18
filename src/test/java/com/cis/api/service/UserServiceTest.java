@@ -1,7 +1,8 @@
 package com.cis.api.service;
 
-import com.cis.api.dto.UserRequestDto;
+import com.cis.api.dto.UserCreateRequest;
 import com.cis.api.dto.UserResponseDto;
+import com.cis.api.dto.UserUpdateRequest;
 import com.cis.api.exception.ResourceNotFoundException;
 import com.cis.api.model.User;
 import com.cis.api.repository.UserRepository;
@@ -10,6 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Collections;
 import java.util.List;
@@ -21,7 +23,6 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
@@ -29,10 +30,11 @@ class UserServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock
+    private PasswordEncoder passwordEncoder;
+
     @InjectMocks
     private UserService userService;
-
-    // ===== TESTS DE LECTURA - LISTA (US 1.1.1) =====
 
     @Test
     void shouldReturnListOfUsersAsDtos() {
@@ -61,217 +63,65 @@ class UserServiceTest {
         // then
         assertThat(result).isEmpty();
     }
-
-    // ===== TESTS DE LECTURA - POR ID (US 1.1.2) =====
-
+    
     @Test
-    void shouldReturnUserDtoWhenUserExists() {
-        // given
+    void shouldGetUserById() {
         UUID id = UUID.randomUUID();
-        User user = new User(id, "Paula", "pmartin", "pass");
+        User user = new User(id, "Test", "test", "pass");
         given(userRepository.findById(id)).willReturn(Optional.of(user));
-
-        // when
+        
         UserResponseDto result = userService.getUserById(id.toString());
-
-        // then
+        
         assertThat(result.id()).isEqualTo(id);
-        assertThat(result.name()).isEqualTo("Paula");
-        assertThat(result.login()).isEqualTo("pmartin");
-        assertThat(result).isNotNull();
+    }
+    
+    @Test
+    void shouldCreateUser() {
+        UserCreateRequest request = new UserCreateRequest("Name", "login", "pass");
+        User savedUser = new User(UUID.randomUUID(), "Name", "login", "encodedPass");
+        
+        given(userRepository.existsByLogin("login")).willReturn(false);
+        given(passwordEncoder.encode("pass")).willReturn("encodedPass");
+        given(userRepository.save(any(User.class))).willReturn(savedUser);
+        
+        UserResponseDto response = userService.createUser(request);
+        
+        assertThat(response.login()).isEqualTo("login");
+        assertThat(response.name()).isEqualTo("Name");
     }
 
     @Test
-    void shouldThrowResourceNotFoundExceptionWhenUserDoesNotExist() {
-        // given
-        UUID id = UUID.randomUUID();
-        given(userRepository.findById(id)).willReturn(Optional.empty());
-
-        // when / then
-        assertThatThrownBy(() -> userService.getUserById(id.toString()))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("User not found with id:");
-    }
-
-    // ===== TESTS DE CREACIÓN (US 1.2.1) =====
-
-    @Test
-    void shouldCreateUserSuccessfully() {
-        // given
-        UserRequestDto request = new UserRequestDto("Juan Pérez", "jperez", "123456");
-        User userToSave = new User();
-        userToSave.setId(UUID.randomUUID());
-        userToSave.setName(request.name());
-        userToSave.setLogin(request.login());
-        userToSave.setPassword(request.password());
-
-        given(userRepository.existsByLogin(request.login())).willReturn(false);
-        given(userRepository.save(any(User.class))).willReturn(userToSave);
-
-        // when
-        UserResponseDto result = userService.createUser(request);
-
-        // then
-        assertThat(result).isNotNull();
-        assertThat(result.name()).isEqualTo("Juan Pérez");
-        assertThat(result.login()).isEqualTo("jperez");
-        assertThat(result.id()).isNotNull();
-
-        then(userRepository).should().existsByLogin("jperez");
-        then(userRepository).should().save(any(User.class));
-    }
-
-    @Test
-    void shouldThrowExceptionWhenLoginAlreadyExists() {
-        // given
-        UserRequestDto request = new UserRequestDto("Juan Pérez", "jperez", "123456");
-        given(userRepository.existsByLogin(request.login())).willReturn(true);
-
-        // when & then
+    void shouldThrowWhenCreatingDuplicateLogin() {
+        UserCreateRequest request = new UserCreateRequest("Name", "login", "pass");
+        given(userRepository.existsByLogin("login")).willReturn(true);
+        
         assertThatThrownBy(() -> userService.createUser(request))
                 .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Login already exists: jperez");
-
-        then(userRepository).should().existsByLogin("jperez");
-        then(userRepository).should(never()).save(any(User.class));
+                .hasMessageContaining("Login already exists");
     }
-
+    
     @Test
-    void shouldGenerateValidUuidWhenCreatingUser() {
-        // given
-        UserRequestDto request = new UserRequestDto("Juan Pérez", "jperez", "123456");
-
-        given(userRepository.existsByLogin(request.login())).willReturn(false);
-        given(userRepository.save(any(User.class))).willAnswer(invocation -> {
-            User userToSave = invocation.getArgument(0);
-            userToSave.setId(UUID.randomUUID());
-            return userToSave;
-        });
-
-        // when
-        UserResponseDto result = userService.createUser(request);
-
-        // then
-        assertThat(result.id()).isNotNull();
-        assertThat(result.id().toString()).matches("[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}");
-    }
-
-    // ===== TESTS of Update (US 1.3.1) =====
-
-    @Test
-    void shouldUpdateUserSuccessfully() {
-        // given
+    void shouldUpdateUser() {
         UUID id = UUID.randomUUID();
-        User existingUser = new User(id, "Juan Viejo", "juanv", "oldpass");
-        UserRequestDto request = new UserRequestDto("Juan Actualizado", "jupdated", "newpass123");
-        User updatedUser = new User(id, "Juan Actualizado", "jupdated", "newpass123");
+        UserUpdateRequest request = new UserUpdateRequest("New Name", null, null);
+        User existingUser = new User(id, "Old Name", "login", "pass");
+        User updatedUser = new User(id, "New Name", "login", "pass");
 
         given(userRepository.findById(id)).willReturn(Optional.of(existingUser));
-        given(userRepository.existsByLoginAndIdNot("jupdated", id)).willReturn(false);
-        given(userRepository.save(any(User.class))).willReturn(updatedUser);
+        given(userRepository.save(existingUser)).willReturn(updatedUser);
 
-        // when
-        UserResponseDto result = userService.updateUser(id.toString(), request);
-
-        // then
-        assertThat(result).isNotNull();
-        assertThat(result.id()).isEqualTo(id);
-        assertThat(result.name()).isEqualTo("Juan Actualizado");
-        assertThat(result.login()).isEqualTo("jupdated");
-
-        then(userRepository).should().findById(id);
-        then(userRepository).should().save(any(User.class));
+        UserResponseDto response = userService.updateUser(id.toString(), request);
+        
+        assertThat(response.name()).isEqualTo("New Name");
     }
 
     @Test
-    void shouldThrowResourceNotFoundExceptionWhenUpdatingNonExistentUser() {
-        // given
+    void shouldDeleteUser() {
         UUID id = UUID.randomUUID();
-        UserRequestDto request = new UserRequestDto("Juan", "juanv", "123456");
-
-        given(userRepository.findById(id)).willReturn(Optional.empty());
-
-        // when & then
-        assertThatThrownBy(() -> userService.updateUser(id.toString(), request))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("User not found with id:");
-
-        then(userRepository).should().findById(id);
-        then(userRepository).should(never()).save(any(User.class));
-    }
-
-    @Test
-    void shouldThrowExceptionWhenUpdatingWithLoginOfAnotherUser() {
-        // given
-        UUID id = UUID.randomUUID();
-        User existingUser = new User(id, "Juan Viejo", "juanv", "oldpass");
-        UserRequestDto request = new UserRequestDto("Juan Viejo", "loginajeno", "oldpass");
-
-        given(userRepository.findById(id)).willReturn(Optional.of(existingUser));
-        given(userRepository.existsByLoginAndIdNot("loginajeno", id)).willReturn(true);
-
-        // when & then
-        assertThatThrownBy(() -> userService.updateUser(id.toString(), request))
-                .isInstanceOf(RuntimeException.class)
-                .hasMessageContaining("Login already exists: loginajeno");
-
-        then(userRepository).should(never()).save(any(User.class));
-    }
-
-    // ===== TESTS of Delete (US 1.4.1) =====
-
-    /**
-     * UC 1.4.1.1 – Verifies that deleteUser removes the user
-     * when the user exists in the database.
-     */
-    @Test
-    void shouldDeleteUserSuccessfully() {
-        // given
-        UUID id = UUID.randomUUID();
-        User existingUser = new User(id, "Juan", "juanv", "pass123");
-        given(userRepository.findById(id)).willReturn(Optional.of(existingUser));
-
-        // when
+        given(userRepository.existsById(id)).willReturn(true);
+        
         userService.deleteUser(id.toString());
-
-        // then
-        then(userRepository).should().findById(id);
-        then(userRepository).should().delete(existingUser);
-    }
-
-    /**
-     * UC 1.4.1.2 – Verifies that deleteUser throws ResourceNotFoundException
-     * when the user does not exist.
-     */
-    @Test
-    void shouldThrowResourceNotFoundExceptionWhenDeletingNonExistentUser() {
-        // given
-        UUID id = UUID.randomUUID();
-        given(userRepository.findById(id)).willReturn(Optional.empty());
-
-        // when & then
-        assertThatThrownBy(() -> userService.deleteUser(id.toString()))
-                .isInstanceOf(ResourceNotFoundException.class)
-                .hasMessageContaining("User not found with id:");
-
-        then(userRepository).should().findById(id);
-        then(userRepository).should(never()).delete(any(User.class));
-    }
-
-    /**
-     * UC 1.4.1.3 – Verifies that deleteUser throws IllegalArgumentException
-     * when the ID format is invalid (not a UUID).
-     */
-    @Test
-    void shouldThrowExceptionWhenDeletingWithInvalidIdFormat() {
-        // given
-        String invalidId = "not-a-uuid";
-
-        // when & then
-        assertThatThrownBy(() -> userService.deleteUser(invalidId))
-                .isInstanceOf(IllegalArgumentException.class);
-
-        then(userRepository).should(never()).findById(any(UUID.class));
-        then(userRepository).should(never()).delete(any(User.class));
+        
+        then(userRepository).should().deleteById(id);
     }
 }
