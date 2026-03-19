@@ -22,152 +22,112 @@ class UserRepositoryTest {
 
     @Test
     void shouldFindAllUsers() {
-        // given
         User user1 = new User(UUID.randomUUID(), "John Doe", "jdoe", "secret1");
         User user2 = new User(UUID.randomUUID(), "Jane Smith", "jsmith", "secret2");
         entityManager.persist(user1);
         entityManager.persist(user2);
         entityManager.flush();
 
-        // when
         List<User> users = userRepository.findAll();
 
-        // then
         assertThat(users).hasSize(2)
                 .extracting(User::getLogin)
                 .containsExactlyInAnyOrder("jdoe", "jsmith");
     }
 
-    /**
-     * Verifies that findById returns the correct user when the user exists.
-     */
     @Test
     void shouldFindUserById() {
-        // given
         UUID id = UUID.randomUUID();
         User user = new User(id, "Paula", "pmartin", "pass");
         entityManager.persist(user);
         entityManager.flush();
 
-        // when
         var result = userRepository.findById(id);
 
-        // then
         assertThat(result).isPresent();
         assertThat(result.get().getLogin()).isEqualTo("pmartin");
         assertThat(result.get().getName()).isEqualTo("Paula");
     }
 
-    /**
-     * Verifies that findById returns empty when the user does not exist.
-     */
     @Test
     void shouldReturnEmptyWhenUserNotFound() {
-        // given
         UUID id = UUID.randomUUID();
-
-        // when
         var result = userRepository.findById(id);
-
-        // then
         assertThat(result).isEmpty();
     }
 
     @Test
     void existsByLogin_WhenLoginExists_ShouldReturnTrue() {
-        // given
         User user = new User(UUID.randomUUID(), "Test User", "testlogin", "password");
         entityManager.persist(user);
         entityManager.flush();
 
-        // when
         boolean exists = userRepository.existsByLogin("testlogin");
 
-        // then
         assertThat(exists).isTrue();
     }
 
     @Test
     void existsByLogin_WhenLoginDoesNotExist_ShouldReturnFalse() {
-        // when
         boolean exists = userRepository.existsByLogin("nonexistent");
-
-        // then
         assertThat(exists).isFalse();
     }
 
     @Test
     void saveUser_ShouldGenerateAndReturnId() {
-        // given
         User user = new User();
         user.setId(UUID.randomUUID());
         user.setName("New User");
         user.setLogin("newuser");
         user.setPassword("password123");
 
-        // when
         User savedUser = userRepository.save(user);
 
-        // then
         assertThat(savedUser.getId()).isNotNull();
-        assertThat(savedUser.getId()).isInstanceOf(UUID.class);
         assertThat(savedUser.getName()).isEqualTo("New User");
         assertThat(savedUser.getLogin()).isEqualTo("newuser");
     }
-    // ===== TESTS of update (US 1.3.1) =====
 
     @Test
     void existsByLoginAndIdNot_WhenLoginExistsForDifferentUser_ShouldReturnTrue() {
-        // given
         UUID userId1 = UUID.randomUUID();
         UUID userId2 = UUID.randomUUID();
         entityManager.persist(new User(userId1, "User One", "loginshared", "pass1"));
         entityManager.persist(new User(userId2, "User Two", "otherone", "pass2"));
         entityManager.flush();
 
-        // when — userId2 tries to take "loginshared" which belongs to userId1
         boolean exists = userRepository.existsByLoginAndIdNot("loginshared", userId2);
 
-        // then
         assertThat(exists).isTrue();
     }
 
     @Test
     void existsByLoginAndIdNot_WhenLoginBelongsToSameUser_ShouldReturnFalse() {
-        // given
         UUID userId = UUID.randomUUID();
         entityManager.persist(new User(userId, "User One", "mylogin", "pass1"));
         entityManager.flush();
 
-        // when — same user keeps their own login
         boolean exists = userRepository.existsByLoginAndIdNot("mylogin", userId);
 
-        // then
         assertThat(exists).isFalse();
     }
 
-    // ===== TESTS of Delete (US 1.4.1) =====
-
     @Test
     void deleteUser_ShouldRemoveUserFromDatabase() {
-        // given
         UUID id = UUID.randomUUID();
         User user = new User(id, "To Delete", "todelete", "pass123");
         entityManager.persist(user);
         entityManager.flush();
 
-        // when
         userRepository.delete(user);
         entityManager.flush();
 
-        // then
         var result = userRepository.findById(id);
         assertThat(result).isEmpty();
     }
 
     @Test
     void deleteUser_ShouldNotAffectOtherUsers() {
-        // given
         UUID id1 = UUID.randomUUID();
         UUID id2 = UUID.randomUUID();
         User user1 = new User(id1, "User One", "userone", "pass1");
@@ -176,11 +136,9 @@ class UserRepositoryTest {
         entityManager.persist(user2);
         entityManager.flush();
 
-        // when — delete only user1
         userRepository.delete(user1);
         entityManager.flush();
 
-        // then — user2 still exists
         assertThat(userRepository.findById(id1)).isEmpty();
         assertThat(userRepository.findById(id2)).isPresent();
         assertThat(userRepository.findAll()).hasSize(1);
