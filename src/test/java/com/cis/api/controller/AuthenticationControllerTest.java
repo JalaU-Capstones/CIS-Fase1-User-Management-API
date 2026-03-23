@@ -22,6 +22,7 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.mockito.ArgumentMatchers.any;
 
 @WebMvcTest(AuthenticationController.class)
 @Import({SecurityConfig.class, ApplicationConfig.class, JwtAuthenticationFilter.class, CustomAuthenticationEntryPoint.class})
@@ -55,5 +56,16 @@ class AuthenticationControllerTest {
                         .content("{\"login\":\"user\", \"password\":\"pass\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.token").value("token123"));
+    }
+
+    @Test
+    void shouldReturn401WhenInvalidCredentials() throws Exception {
+        given(authenticationService.authenticate(any(AuthRequest.class)))
+                .willThrow(new org.springframework.security.authentication.BadCredentialsException("Invalid credentials"));
+
+        mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"login\":\"wronguser\", \"password\":\"wrongpass\"}"))
+                .andExpect(status().isUnauthorized());
     }
 }
