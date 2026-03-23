@@ -56,6 +56,26 @@ mvn spring-boot:run
 
 API available at: http://localhost:8080
 
+### Test Coverage Report (JaCoCo)
+
+To ensure high code quality, we use JaCoCo to generate test coverage reports.
+
+1. **Generate the Report**
+   Run the following command in the project root:
+   ```bash
+   mvn clean test
+   ```
+
+2. **Locate the Report**
+   The report is generated in: `target/site/jacoco/index.html`
+
+3. **View the Report**
+   - Open the file `target/site/jacoco/index.html` in your web browser.
+   - Or, double-click the file if you are browsing the directory.
+
+4. **Understanding Coverage**
+   The report shows the percentage of code lines covered by unit tests. A higher percentage indicates that more code paths are being tested, reducing the likelihood of bugs.
+
 ## Development Workflow
 - Create feature branches: `feature/#XX-description-initials`
 - Commit small & descriptive
