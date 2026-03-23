@@ -11,3 +11,6 @@ spring:
 springdoc:
   swagger-ui:
     enabled: true
+api:
+  security:
+    public-read-endpoints: true
