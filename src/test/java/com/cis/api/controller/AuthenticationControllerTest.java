@@ -1,5 +1,6 @@
 package com.cis.api.controller;
 
+import com.cis.api.config.AccessLevelProperties;
 import com.cis.api.config.ApplicationConfig;
 import com.cis.api.config.SecurityConfig;
 import com.cis.api.dto.AuthRequest;
@@ -25,7 +26,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.mockito.ArgumentMatchers.any;
 
 @WebMvcTest(AuthenticationController.class)
-@Import({SecurityConfig.class, ApplicationConfig.class, JwtAuthenticationFilter.class, CustomAuthenticationEntryPoint.class})
+@Import({SecurityConfig.class, ApplicationConfig.class, JwtAuthenticationFilter.class, CustomAuthenticationEntryPoint.class,
+        AccessLevelProperties.class})
 @TestPropertySource(properties = {
         "application-properties.jwt.secret-key=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970",
         "application-properties.jwt.expiration-time=864000000"
