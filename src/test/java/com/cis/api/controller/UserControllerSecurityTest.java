@@ -1,5 +1,6 @@
 package com.cis.api.controller;
 
+import com.cis.api.config.AccessLevelProperties;
 import com.cis.api.config.ApplicationConfig;
 import com.cis.api.config.SecurityConfig;
 import com.cis.api.dto.UserRequestDto;
@@ -28,7 +29,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(UserController.class)
-@Import({SecurityConfig.class, ApplicationConfig.class, JwtAuthenticationFilter.class, CustomAuthenticationEntryPoint.class})
+@Import({SecurityConfig.class, ApplicationConfig.class, JwtAuthenticationFilter.class, CustomAuthenticationEntryPoint.class,
+        AccessLevelProperties.class})
 @TestPropertySource(properties = {
         "application-properties.jwt.secret-key=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970",
         "application-properties.jwt.expiration-time=864000000"
@@ -54,6 +56,7 @@ class UserControllerSecurityTest {
     }
 
     @Test
+    @WithMockUser
     void shouldReturnBadRequestWhenCreatingUserWithEmptyBody() throws Exception {
         mockMvc.perform(post("/api/v1/users")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -61,15 +64,13 @@ class UserControllerSecurityTest {
                 .andExpect(status().isBadRequest());
     }
 
-    @Test
-    void shouldAllowPublicAccessToCreateUser() throws Exception {
-        UserResponseDto response = new UserResponseDto(UUID.randomUUID(), "Test", "test");
-        given(userService.createUser(any(UserRequestDto.class))).willReturn(response);
 
+    @Test
+    void shouldDenyUnauthenticatedAccessToCreateUser() throws Exception {
         mockMvc.perform(post("/api/v1/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Test\",\"login\":\"test\",\"password\":\"password123\"}"))
-                .andExpect(status().isCreated());
+                .andExpect(status().isUnauthorized());
     }
 
     @Test
