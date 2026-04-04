@@ -24,7 +24,6 @@ public class SecurityConfig {
     private final JwtAuthenticationFilter jwtAuthFilter;
     private final AuthenticationProvider authenticationProvider;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
-    private final AccessLevelProperties accessLevelProperties;
 
     private static final String[] PUBLIC_ENDPOINTS = {
             "/api/v1/auth/login",
@@ -36,22 +35,14 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        log.info("Configuring security: GET /api/v1/users/** is {}",
-                accessLevelProperties.isPublicReadEndpoints() ? "PUBLIC" : "RESTRICTED (JWT required)");
+        log.info("Configuring security: GET /api/v1/users/** is PUBLIC");
 
         return http
                 .csrf(AbstractHttpConfigurer::disable)
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(customAuthenticationEntryPoint))
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(PUBLIC_ENDPOINTS).permitAll();
-
-                    // Configurable access level for read endpoints
-                    if (accessLevelProperties.isPublicReadEndpoints()) {
-                        auth.requestMatchers(HttpMethod.GET, "/api/v1/users/**").permitAll();
-                    } else {
-                        auth.requestMatchers(HttpMethod.GET, "/api/v1/users/**").authenticated();
-                    }
-
+                    auth.requestMatchers(HttpMethod.GET, "/api/v1/users/**").permitAll();
                     auth.anyRequest().authenticated();
                 })
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

@@ -66,35 +66,11 @@ You can use the Swagger UI to explore and test the API endpoints directly from y
 
 ## 6. Testing the API
 
-The API uses JWT Bearer Token Authentication. Read operations (GET) and creating the first user are public, but other write operations (PUT, DELETE) require a valid token.
+The API uses JWT Bearer Token Authentication. Read operations (GET) and authentication (POST login) are public, but all modification operations (POST, PUT, DELETE) require a valid token.
 
-### 6.1. POST /api/v1/users (Public)
+### 6.1. POST /api/v1/auth/login (Public)
 
-Create the first user. This endpoint is public.
-
-**Request:**
-```bash
-curl -X POST http://localhost:8080/api/v1/users \
-     -H "Content-Type: application/json" \
-     -d '{
-           "name": "Test User",
-           "login": "testuser",
-           "password": "password123"
-         }'
-```
-
-**Expected Response (201 Created):**
-```json
-{
-  "id": "generated-uuid",
-  "name": "Test User",
-  "login": "testuser"
-}
-```
-
-### 6.2. POST /api/v1/auth/login (Public)
-
-Authenticate to receive a JWT token.
+Authenticate to receive a JWT token. This API supports legacy plain-text passwords. If your password is not hashed, you will receive a message encouraging you to update it.
 
 **Request:**
 ```bash
@@ -109,13 +85,14 @@ curl -X POST http://localhost:8080/api/v1/auth/login \
 **Expected Response (200 OK):**
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0dXNlciIsImV4cCI6MTcx..."
+  "token": "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ0ZXN0dXNlciIsImV4cCI6MTcx...",
+  "message": "Login successful. For security reasons, please change your password to enable hashing."
 }
 ```
 
 **Note:** Copy this token for subsequent requests.
 
-### 6.3. GET /api/v1/users (Public)
+### 6.2. GET /api/v1/users (Public)
 
 Retrieve all users (password field is excluded).
 
@@ -135,7 +112,7 @@ curl -v http://localhost:8080/api/v1/users
 ]
 ```
 
-### 6.4. GET /api/v1/users/{id} (Public)
+### 6.3. GET /api/v1/users/{id} (Public)
 Retrieve a specific user by ID.
 
 **Request:**
@@ -143,9 +120,35 @@ Retrieve a specific user by ID.
 curl http://localhost:8080/api/v1/users/550e8400-e29b-41d4-a716-446655440000
 ```
 
+### 6.4. POST /api/v1/users (Protected)
+
+Create a new user. Requires Bearer Token.
+
+**Request:**
+```bash
+TOKEN="your_jwt_token_here"
+curl -X POST http://localhost:8080/api/v1/users \
+     -H "Authorization: Bearer $TOKEN" \
+     -H "Content-Type: application/json" \
+     -d '{
+           "name": "New User",
+           "login": "newuser",
+           "password": "password123"
+         }'
+```
+
+**Expected Response (201 Created):**
+```json
+{
+  "id": "generated-uuid",
+  "name": "New User",
+  "login": "newuser"
+}
+```
+
 ### 6.5. PUT /api/v1/users/{id} (Protected)
 
-Update an existing user. Requires Bearer Token.
+Update an existing user. Requires Bearer Token. When updating a user, the password will be automatically hashed for better security.
 
 **Request:**
 ```bash
@@ -193,7 +196,7 @@ curl -X DELETE http://localhost:8080/api/v1/users/$USER_ID \
 
 ## 8. Common Issues & Warnings
 
-- **403 Forbidden**: If you get this on PUT/DELETE, check your Authorization header format (`Bearer <token>`) and ensure the token is not expired.
+- **403 Forbidden**: If you get this on POST/PUT/DELETE, check your Authorization header format (`Bearer <token>`) and ensure the token is not expired.
 - **Port Conflict**: If port 8080 is in use, modify `server.port` in `application.properties`.
 - **Database Connection**: Ensure the Docker container is running before starting the app.
 - **Deprecation Warnings**: We use `@MockitoBean` in tests to align with Spring Boot 3.4+.
