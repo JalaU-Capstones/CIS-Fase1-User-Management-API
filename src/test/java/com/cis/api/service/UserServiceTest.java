@@ -6,11 +6,17 @@ import com.cis.api.dto.UserResponseDto;
 import com.cis.api.exception.ResourceNotFoundException;
 import com.cis.api.model.User;
 import com.cis.api.repository.UserRepository;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContext;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.Collections;
@@ -23,6 +29,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 
 @ExtendWith(MockitoExtension.class)
@@ -39,6 +46,26 @@ class UserServiceTest {
 
     @InjectMocks
     private UserService userService;
+
+    private SecurityContext securityContext;
+    private Authentication authentication;
+
+    @BeforeEach
+    void setUp() {
+        securityContext = mock(SecurityContext.class);
+        authentication = mock(Authentication.class);
+        SecurityContextHolder.setContext(securityContext);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
+
+    private void mockAuthentication(String username) {
+        given(securityContext.getAuthentication()).willReturn(authentication);
+        given(authentication.getPrincipal()).willReturn(username);
+    }
 
     @Test
     void shouldReturnListOfUsersAsDtos() {
@@ -105,13 +132,15 @@ class UserServiceTest {
     }
     
     @Test
-    void shouldUpdateUser() {
+    void shouldUpdateUserWhenOwner() {
         UUID id = UUID.randomUUID();
-        UserRequestDto request = new UserRequestDto("New Name", "login", null);
-        User existingUser = new User(id, "Old Name", "login", "pass");
-        User updatedUser = new User(id, "New Name", "login", "pass");
+        String login = "owner";
+        UserRequestDto request = new UserRequestDto("New Name", login, null);
+        User existingUser = new User(id, "Old Name", login, "pass");
+        User updatedUser = new User(id, "New Name", login, "pass");
         UserResponseDto userResponseDto = new UserResponseDto(updatedUser.getId(), updatedUser.getName(), updatedUser.getLogin());
 
+        mockAuthentication(login);
         given(userRepository.findById(id)).willReturn(Optional.of(existingUser));
         given(userRepository.save(existingUser)).willReturn(updatedUser);
         given(userMapper.toDto(updatedUser)).willReturn(userResponseDto);
@@ -122,9 +151,27 @@ class UserServiceTest {
     }
 
     @Test
-    void shouldDeleteUser() {
+    void shouldThrowWhenUpdatingAnotherUser() {
         UUID id = UUID.randomUUID();
-        given(userRepository.existsById(id)).willReturn(true);
+        UserRequestDto request = new UserRequestDto("New Name", "other", null);
+        User existingUser = new User(id, "Old Name", "other", "pass");
+
+        mockAuthentication("not-owner");
+        given(userRepository.findById(id)).willReturn(Optional.of(existingUser));
+
+        assertThatThrownBy(() -> userService.updateUser(id.toString(), request))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("You can only modify your own user record");
+    }
+
+    @Test
+    void shouldDeleteUserWhenOwner() {
+        UUID id = UUID.randomUUID();
+        String login = "owner";
+        User user = new User(id, "Test", login, "pass");
+        
+        mockAuthentication(login);
+        given(userRepository.findById(id)).willReturn(Optional.of(user));
         
         userService.deleteUser(id.toString());
         
@@ -132,9 +179,22 @@ class UserServiceTest {
     }
 
     @Test
+    void shouldThrowWhenDeletingAnotherUser() {
+        UUID id = UUID.randomUUID();
+        User user = new User(id, "Test", "other", "pass");
+
+        mockAuthentication("not-owner");
+        given(userRepository.findById(id)).willReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> userService.deleteUser(id.toString()))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("You can only modify your own user record");
+    }
+
+    @Test
     void shouldThrowWhenDeletingNonExistentUser() {
         UUID id = UUID.randomUUID();
-        given(userRepository.existsById(id)).willReturn(false);
+        given(userRepository.findById(id)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> userService.deleteUser(id.toString()))
                 .isInstanceOf(ResourceNotFoundException.class)
