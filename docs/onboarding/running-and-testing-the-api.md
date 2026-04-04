@@ -122,7 +122,7 @@ curl http://localhost:8080/api/v1/users/550e8400-e29b-41d4-a716-446655440000
 
 ### 6.4. POST /api/v1/users (Protected)
 
-Create a new user. Requires Bearer Token.
+Create a new user. Requires Bearer Token. Any authenticated user can create new accounts.
 
 **Request:**
 ```bash
@@ -146,9 +146,9 @@ curl -X POST http://localhost:8080/api/v1/users \
 }
 ```
 
-### 6.5. PUT /api/v1/users/{id} (Protected)
+### 6.5. PUT /api/v1/users/{id} (Protected - Ownership Required)
 
-Update an existing user. Requires Bearer Token. When updating a user, the password will be automatically hashed for better security.
+Update an existing user. Requires Bearer Token. **A user can only update their own record.**
 
 **Request:**
 ```bash
@@ -174,9 +174,18 @@ curl -X PUT http://localhost:8080/api/v1/users/$USER_ID \
 }
 ```
 
-### 6.6. DELETE /api/v1/users/{id} (Protected)
+**Error Response (403 Forbidden - if modifying another user):**
+```json
+{
+  "status": 403,
+  "error": "Forbidden",
+  "message": "You can only modify your own user record."
+}
+```
 
-Delete a user. Requires Bearer Token.
+### 6.6. DELETE /api/v1/users/{id} (Protected - Ownership Required)
+
+Delete a user. Requires Bearer Token. **A user can only delete their own record.**
 
 **Request:**
 ```bash
@@ -196,7 +205,7 @@ curl -X DELETE http://localhost:8080/api/v1/users/$USER_ID \
 
 ## 8. Common Issues & Warnings
 
-- **403 Forbidden**: If you get this on POST/PUT/DELETE, check your Authorization header format (`Bearer <token>`) and ensure the token is not expired.
+- **403 Forbidden**: If you get this on POST, check your token. If you get it on PUT/DELETE, ensure you are trying to modify **your own** record.
 - **Port Conflict**: If port 8080 is in use, modify `server.port` in `application.properties`.
 - **Database Connection**: Ensure the Docker container is running before starting the app.
 - **Deprecation Warnings**: We use `@MockitoBean` in tests to align with Spring Boot 3.4+.

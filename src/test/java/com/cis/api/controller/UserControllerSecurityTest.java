@@ -9,12 +9,14 @@ import com.cis.api.security.JwtAuthenticationFilter;
 import com.cis.api.security.JwtService;
 import com.cis.api.service.CustomUserDetailsService;
 import com.cis.api.service.UserService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
@@ -24,6 +26,7 @@ import java.util.UUID;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
+import static org.mockito.Mockito.doThrow;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -37,6 +40,9 @@ class UserControllerSecurityTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private ObjectMapper objectMapper;
 
     @MockBean
     private UserService userService;
@@ -54,14 +60,17 @@ class UserControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser
-    void shouldReturnBadRequestWhenCreatingUserWithEmptyBody() throws Exception {
+    @WithMockUser(username = "testuser")
+    void shouldAllowAuthenticatedAccessToCreateUser() throws Exception {
+        UserRequestDto request = new UserRequestDto("New User", "newuser", "password123");
+        UserResponseDto response = new UserResponseDto(UUID.randomUUID(), "New User", "newuser");
+        given(userService.createUser(any(UserRequestDto.class))).willReturn(response);
+
         mockMvc.perform(post("/api/v1/users")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{}"))
-                .andExpect(status().isBadRequest());
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
     }
-
 
     @Test
     void shouldDenyUnauthenticatedAccessToCreateUser() throws Exception {
@@ -69,6 +78,34 @@ class UserControllerSecurityTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"name\":\"Test\",\"login\":\"test\",\"password\":\"password123\"}"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    @WithMockUser(username = "owner")
+    void shouldAllowAuthenticatedAccessToUpdateOwnUser() throws Exception {
+        UUID id = UUID.randomUUID();
+        UserRequestDto request = new UserRequestDto("Test", "owner", "password123");
+        UserResponseDto response = new UserResponseDto(id, "Test", "owner");
+        given(userService.updateUser(eq(id.toString()), any(UserRequestDto.class))).willReturn(response);
+
+        mockMvc.perform(put("/api/v1/users/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    @WithMockUser(username = "anotherUser")
+    void shouldDenyAuthenticatedAccessToUpdateAnotherUser() throws Exception {
+        UUID id = UUID.randomUUID();
+        UserRequestDto request = new UserRequestDto("Test", "owner", "password123");
+        doThrow(new AccessDeniedException("You can only modify your own user record."))
+                .when(userService).updateUser(eq(id.toString()), any(UserRequestDto.class));
+
+        mockMvc.perform(put("/api/v1/users/" + id)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isForbidden());
     }
 
     @Test
@@ -80,29 +117,28 @@ class UserControllerSecurityTest {
     }
 
     @Test
-    @WithMockUser
-    void shouldAllowAuthenticatedAccessToUpdateUser() throws Exception {
+    @WithMockUser(username = "owner")
+    void shouldAllowAuthenticatedAccessToDeleteOwnUser() throws Exception {
         UUID id = UUID.randomUUID();
-        UserResponseDto response = new UserResponseDto(id, "Test", "test");
-        given(userService.updateUser(eq(id.toString()), any(UserRequestDto.class))).willReturn(response);
+        // No need to mock return value for void method, just ensure it doesn't throw
+        mockMvc.perform(delete("/api/v1/users/" + id))
+                .andExpect(status().isNoContent());
+    }
 
-        mockMvc.perform(put("/api/v1/users/" + id)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"name\":\"Test\",\"login\":\"test\",\"password\":\"password123\"}"))
-                .andExpect(status().isOk());
+    @Test
+    @WithMockUser(username = "anotherUser")
+    void shouldDenyAuthenticatedAccessToDeleteAnotherUser() throws Exception {
+        UUID id = UUID.randomUUID();
+        doThrow(new AccessDeniedException("You can only modify your own user record."))
+                .when(userService).deleteUser(eq(id.toString()));
+
+        mockMvc.perform(delete("/api/v1/users/" + id))
+                .andExpect(status().isForbidden());
     }
 
     @Test
     void shouldDenyUnauthenticatedAccessToDeleteUser() throws Exception {
         mockMvc.perform(delete("/api/v1/users/" + UUID.randomUUID()))
                 .andExpect(status().isUnauthorized());
-    }
-
-    @Test
-    @WithMockUser
-    void shouldAllowAuthenticatedAccessToDeleteUser() throws Exception {
-        UUID id = UUID.randomUUID();
-        mockMvc.perform(delete("/api/v1/users/" + id))
-                .andExpect(status().isNoContent());
     }
 }
