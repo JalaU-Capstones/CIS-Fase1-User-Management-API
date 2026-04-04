@@ -62,9 +62,9 @@ class UserServiceTest {
         SecurityContextHolder.clearContext();
     }
 
-    private void mockAuthentication(String username) {
+    private void mockAuthentication(Object principal) {
         given(securityContext.getAuthentication()).willReturn(authentication);
-        given(authentication.getPrincipal()).willReturn(username);
+        given(authentication.getPrincipal()).willReturn(principal);
     }
 
     @Test
@@ -135,7 +135,27 @@ class UserServiceTest {
     void shouldUpdateUserWhenOwner() {
         UUID id = UUID.randomUUID();
         String login = "owner";
-        UserRequestDto request = new UserRequestDto("New Name", login, null);
+        UserRequestDto request = new UserRequestDto("New Name", login, "newpass");
+        User existingUser = new User(id, "Old Name", login, "pass");
+        User updatedUser = new User(id, "New Name", login, "encodedNewPass");
+        UserResponseDto userResponseDto = new UserResponseDto(updatedUser.getId(), updatedUser.getName(), updatedUser.getLogin());
+
+        mockAuthentication(login);
+        given(userRepository.findById(id)).willReturn(Optional.of(existingUser));
+        given(passwordEncoder.encode("newpass")).willReturn("encodedNewPass");
+        given(userRepository.save(existingUser)).willReturn(updatedUser);
+        given(userMapper.toDto(updatedUser)).willReturn(userResponseDto);
+
+        UserResponseDto response = userService.updateUser(id.toString(), request);
+        
+        assertThat(response.name()).isEqualTo("New Name");
+    }
+
+    @Test
+    void shouldUpdateUserWithoutChangingPasswordWhenBlank() {
+        UUID id = UUID.randomUUID();
+        String login = "owner";
+        UserRequestDto request = new UserRequestDto("New Name", login, "");
         User existingUser = new User(id, "Old Name", login, "pass");
         User updatedUser = new User(id, "New Name", login, "pass");
         UserResponseDto userResponseDto = new UserResponseDto(updatedUser.getId(), updatedUser.getName(), updatedUser.getLogin());
@@ -148,6 +168,23 @@ class UserServiceTest {
         UserResponseDto response = userService.updateUser(id.toString(), request);
         
         assertThat(response.name()).isEqualTo("New Name");
+        then(passwordEncoder).should(never()).encode(any());
+    }
+
+    @Test
+    void shouldThrowWhenUpdatingWithDuplicateLogin() {
+        UUID id = UUID.randomUUID();
+        String login = "owner";
+        UserRequestDto request = new UserRequestDto("New Name", "newlogin", null);
+        User existingUser = new User(id, "Old Name", login, "pass");
+
+        mockAuthentication(login);
+        given(userRepository.findById(id)).willReturn(Optional.of(existingUser));
+        given(userRepository.existsByLoginAndIdNot("newlogin", id)).willReturn(true);
+
+        assertThatThrownBy(() -> userService.updateUser(id.toString(), request))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("Login already exists");
     }
 
     @Test

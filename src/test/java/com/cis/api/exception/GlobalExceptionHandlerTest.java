@@ -3,13 +3,13 @@ package com.cis.api.exception;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.BindingResult;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -28,6 +28,17 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
         ErrorResponse body = response.getBody();
         assertThat(body.getMessage()).isEqualTo("Resource not found");
+    }
+
+    @Test
+    void handleAccessDeniedException_ShouldReturn403() {
+        AccessDeniedException ex = new AccessDeniedException("Access denied");
+
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleAccessDeniedException(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
+        ErrorResponse body = response.getBody();
+        assertThat(body.getMessage()).isEqualTo("Access denied");
     }
 
     @Test
@@ -66,5 +77,16 @@ class GlobalExceptionHandlerTest {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
         ErrorResponse body = response.getBody();
         assertThat(body.getMessage()).isEqualTo("Invalid or expired token");
+    }
+
+    @Test
+    void handleGenericException_ShouldReturn500() {
+        Exception ex = new Exception("Internal error");
+
+        ResponseEntity<ErrorResponse> response = exceptionHandler.handleGenericException(ex);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        ErrorResponse body = response.getBody();
+        assertThat(body.getMessage()).isEqualTo("An unexpected error occurred");
     }
 }
