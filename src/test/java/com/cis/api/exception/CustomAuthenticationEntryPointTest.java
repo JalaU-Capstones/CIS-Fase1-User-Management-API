@@ -1,5 +1,6 @@
 package com.cis.api.exception;
 
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.junit.jupiter.api.Test;
@@ -16,7 +17,7 @@ class CustomAuthenticationEntryPointTest {
     private final CustomAuthenticationEntryPoint entryPoint = new CustomAuthenticationEntryPoint();
 
     @Test
-    void commence_ShouldSetResponseStatusAndWriteBody() throws IOException {
+    void commence_ShouldSetResponseStatusAndWriteBody() throws IOException, ServletException {
         HttpServletRequest request = mock(HttpServletRequest.class);
         HttpServletResponse response = mock(HttpServletResponse.class);
         AuthenticationException authException = mock(AuthenticationException.class);
