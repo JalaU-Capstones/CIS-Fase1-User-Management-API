@@ -8,7 +8,7 @@ Before you begin, ensure you have the following installed:
 
 *   **Java Development Kit (JDK) 17 or higher**: [Download and Install JDK](https://www.oracle.com/java/technologies/downloads/)
 *   **Maven 3.6.3 or higher**: [Download and Install Maven](https://maven.apache.org/download.cgi)
-*   **Docker Desktop**: [Download and Install Docker Desktop](https://www.docker.com/products/docker-desktop) (for running the PostgreSQL database)
+*   **Docker Desktop**: [Download and Install Docker Desktop](https://www.docker.com/products/docker-desktop) (for running the MySQL database)
 
 ## 1. Clone the Repository
 
@@ -19,31 +19,31 @@ git clone <repository-url>
 cd CIS-Fase1-User-Management-API
 ```
 
-## 2. Set up the Database (PostgreSQL with Docker)
+## 2. Set up the Database (MySQL with Docker)
 
-The API uses a PostgreSQL database. You can easily run a PostgreSQL instance using Docker.
+The API uses a MySQL database. You can easily run a MySQL instance using Docker.
 
-1.  **Start PostgreSQL container**:
+1.  **Start MySQL container**:
     Open your terminal in the project root directory and run the following command:
 
     ```bash
-    docker run --name cis-postgres -e POSTGRES_DB=cis_users -e POSTGRES_USER=cis_user -e POSTGRES_PASSWORD=cis_password -p 5432:5432 -d postgres:13
+    docker run --name cis-mysql -e MYSQL_DATABASE=sd3 -e MYSQL_USER=cis_user -e MYSQL_PASSWORD=cis_password -e MYSQL_ROOT_PASSWORD=root_password -p 3306:3306 -d mysql:8.0
     ```
 
     This command will:
-    *   Create a Docker container named `cis-postgres`.
-    *   Set the database name to `cis_users`.
+    *   Create a Docker container named `cis-mysql`.
+    *   Set the database name to `sd3`.
     *   Set the username to `cis_user`.
     *   Set the password to `cis_password`.
-    *   Map the container's port 5432 to your host's port 5432.
+    *   Map the container's port 3306 to your host's port 3306.
     *   Run the container in detached mode (`-d`).
 
 2.  **Verify database connection (Optional)**:
-    You can use a tool like `psql` or DBeaver to connect to `localhost:5432` with the credentials `cis_user`/`cis_password` and database `cis_users`.
+    You can use a tool like `mysql` CLI or DBeaver to connect to `localhost:3306` with the credentials `cis_user`/`cis_password` and database `sd3`.
 
 ## 3. Configure the Application
 
-The application configuration is located in `src/main/resources/application.yml`. For local development, the default settings should work with the Dockerized PostgreSQL.
+The application configuration is located in `src/main/resources/application.yml`. For local development, the default settings should work with the Dockerized MySQL.
 
 If you need to change database connection details or other properties, modify `application.yml` or create an `application-dev.yml` for development-specific overrides.
 
@@ -79,13 +79,13 @@ This interface allows you to explore the available endpoints, send requests, and
 
 You can test the API using Swagger UI, Postman, or `curl`.
 
-### Example: Registering a User
+### Example: Logging In
 
 1.  Open Swagger UI.
 2.  Expand the `Authentication` section.
-3.  Try the `POST /api/v1/auth/register` endpoint.
+3.  Try the `POST /api/v1/auth/login` endpoint.
 4.  Click "Try it out".
-5.  In the Request body, provide a new user's details (e.g., `{"name": "John Doe", "login": "john.doe", "password": "password123"}`).
+5.  In the Request body, provide a user's credentials (e.g., `{"login": "john.doe", "password": "password123"}`).
 6.  Click "Execute".
 7.  You should receive a `200 OK` response with a JWT token. Copy this token.
 
@@ -103,7 +103,7 @@ You can test the API using Swagger UI, Postman, or `curl`.
 
 **WARNING**: Deleting a user will also delete all their associated topics, ideas, and votes. This action is irreversible.
 
-1.  Obtain the `id` (UUID) of the user you wish to delete from the `GET /api/v1/users` endpoint or from the registration response.
+1.  Obtain the `id` (UUID) of the user you wish to delete from the `GET /api/v1/users` endpoint or from the login response if applicable.
 2.  Ensure you are authorized with the JWT token of the user you intend to delete.
 3.  Expand the `Users` section.
 4.  Try the `DELETE /api/v1/users/{id}` endpoint.
@@ -116,11 +116,11 @@ You can test the API using Swagger UI, Postman, or `curl`.
 
 To stop the Spring Boot application, press `Ctrl+C` in the terminal where it's running.
 
-To stop and remove the Dockerized PostgreSQL database:
+To stop and remove the Dockerized MySQL database:
 
 ```bash
-docker stop cis-postgres
-docker rm cis-postgres
+docker stop cis-mysql
+docker rm cis-mysql
 ```
 
 This will stop the container and remove it, but the data volume will persist unless explicitly removed. If you want to remove the data volume as well (for a clean start), you might need to use `docker volume ls` and `docker volume rm` commands, but be careful not to delete important data.

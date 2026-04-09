@@ -29,14 +29,26 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByLoginAndIdNot(String login, UUID id);
 
     @Modifying
-    @Query(value = "DELETE FROM topics WHERE owner_id = :userId", nativeQuery = true)
-    void deleteTopicsByUserId(@Param("userId") UUID userId);
+    @Query(value = "DELETE FROM votes WHERE user_id = :userId", nativeQuery = true)
+    void deleteVotesByUserId(@Param("userId") UUID userId);
+
+    @Modifying
+    @Query(value = "DELETE FROM votes WHERE idea_id IN (SELECT id FROM ideas WHERE owner_id = :userId)", nativeQuery = true)
+    void deleteVotesByIdeasOwnedByUserId(@Param("userId") UUID userId);
+
+    @Modifying
+    @Query(value = "DELETE FROM votes WHERE idea_id IN (SELECT i.id FROM ideas i JOIN topics t ON i.topic_id = t.id WHERE t.owner_id = :userId)", nativeQuery = true)
+    void deleteVotesByIdeasLinkedToTopicsOwnedByUserId(@Param("userId") UUID userId);
 
     @Modifying
     @Query(value = "DELETE FROM ideas WHERE owner_id = :userId", nativeQuery = true)
     void deleteIdeasByUserId(@Param("userId") UUID userId);
 
     @Modifying
-    @Query(value = "DELETE FROM votes WHERE user_id = :userId", nativeQuery = true)
-    void deleteVotesByUserId(@Param("userId") UUID userId);
+    @Query(value = "DELETE FROM ideas WHERE topic_id IN (SELECT id FROM topics WHERE owner_id = :userId)", nativeQuery = true)
+    void deleteIdeasLinkedToTopicsOwnedByUserId(@Param("userId") UUID userId);
+
+    @Modifying
+    @Query(value = "DELETE FROM topics WHERE owner_id = :userId", nativeQuery = true)
+    void deleteTopicsByUserId(@Param("userId") UUID userId);
 }

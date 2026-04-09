@@ -76,16 +76,26 @@ public class UserService {
 
         checkOwnership(user);
 
-        // Perform cascade deletion for related records in the correct order
-        // 1. Delete votes (dependent on ideas)
+        // Perform manual cascade deletion in correct order to satisfy foreign key constraints
+        
+        // 1. Delete all votes related to the user's activity or owned content
+        userRepository.deleteVotesByIdeasLinkedToTopicsOwnedByUserId(uuid);
+        userRepository.deleteVotesByIdeasOwnedByUserId(uuid);
         userRepository.deleteVotesByUserId(uuid);
-        // 2. Delete ideas (dependent on topics and users)
-        userRepository.deleteIdeasByUserId(uuid);
-        // 3. Delete topics (dependent on users)
-        userRepository.deleteTopicsByUserId(uuid);
+        userRepository.flush(); // Flush after deleting all votes
 
-        // 4. Delete the user
-        userRepository.deleteById(uuid);
+        // 2. Delete all ideas related to the user or their topics
+        userRepository.deleteIdeasLinkedToTopicsOwnedByUserId(uuid);
+        userRepository.deleteIdeasByUserId(uuid);
+        userRepository.flush(); // Flush after deleting all ideas
+
+        // 3. Delete all topics owned by the user
+        userRepository.deleteTopicsByUserId(uuid);
+        userRepository.flush(); // Flush after deleting all topics
+
+        // 4. Finally delete the user using a native query
+        userRepository.deleteUserByIdNative(uuid);
+        userRepository.flush(); // Final flush
     }
 
     private User findUserById(UUID id) {
