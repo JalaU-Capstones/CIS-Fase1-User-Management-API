@@ -76,6 +76,11 @@ public class UserService {
 
         checkOwnership(user);
 
+        // Perform cascade deletion for related records
+        userRepository.deleteTopicsByUserId(uuid);
+        userRepository.deleteIdeasByUserId(uuid);
+        userRepository.deleteVotesByUserId(uuid);
+
         userRepository.deleteById(uuid);
     }
 

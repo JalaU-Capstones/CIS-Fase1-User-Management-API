@@ -5,6 +5,8 @@ import com.cis.api.dto.UserResponseDto;
 import com.cis.api.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -66,15 +68,18 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUser(id, request));
     }
 
-    @Operation(summary = "Delete  a user", description = "This method deletes an existing user by their Id")
+    @Operation(summary = "Delete a user", description = "This method deletes an existing user by their Id. " +
+            "WARNING: Deleting a user will also delete all their associated topics, ideas, and votes.")
     @ApiResponses({
-            @ApiResponse(responseCode = "204", description = "User deleted successfully"),
-            @ApiResponse(responseCode = "404", description = "User not found")
+            @ApiResponse(responseCode = "200", description = "User and all related topics, ideas, and votes have been successfully deleted.",
+                    content = @Content(schema = @Schema(implementation = String.class))),
+            @ApiResponse(responseCode = "404", description = "User not found"),
+            @ApiResponse(responseCode = "403", description = "Forbidden: You can only delete your own user record.")
     })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteUser(@Parameter(description = "UUID of the user", example = "550e8400-e29b-41d4-a716-446655440000")
+    public ResponseEntity<String> deleteUser(@Parameter(description = "UUID of the user", example = "550e8400-e29b-41d4-a716-446655440000")
             @PathVariable String id) {
         userService.deleteUser(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok("User and all related topics, ideas, and votes have been successfully deleted.");
     }
 }
