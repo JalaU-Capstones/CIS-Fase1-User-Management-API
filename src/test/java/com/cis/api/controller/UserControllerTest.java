@@ -156,11 +156,12 @@ class UserControllerTest {
 
     @Test
     @WithMockUser
-    void deleteUser_WithExistingId_ShouldReturn204() throws Exception {
+    void deleteUser_WithExistingId_ShouldReturn200() throws Exception {
         UUID id = UUID.randomUUID();
         
         mockMvc.perform(delete("/api/v1/users/" + id))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(content().string("User and all related topics, ideas, and votes have been successfully deleted."));
     }
 
     @Test

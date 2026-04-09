@@ -98,7 +98,7 @@ class UserControllerSecurityTest {
     @WithMockUser(username = "anotherUser")
     void shouldDenyAuthenticatedAccessToUpdateAnotherUser() throws Exception {
         UUID id = UUID.randomUUID();
-        UserRequestDto request = new UserRequestDto("Test", "owner", "password123");
+        UserRequestDto request = new UserRequestDto("Test", "owner", "password123"); // Define request here
         doThrow(new AccessDeniedException("You can only modify your own user record."))
                 .when(userService).updateUser(eq(id.toString()), any(UserRequestDto.class));
 
@@ -122,7 +122,7 @@ class UserControllerSecurityTest {
         UUID id = UUID.randomUUID();
         // No need to mock return value for void method, just ensure it doesn't throw
         mockMvc.perform(delete("/api/v1/users/" + id))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk()); // Changed to isOk()
     }
 
     @Test
