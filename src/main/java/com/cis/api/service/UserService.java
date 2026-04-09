@@ -69,7 +69,7 @@ public class UserService {
         return userMapper.toDto(userRepository.save(user));
     }
 
-    @Transactional
+    @Transactional(readOnly = false)
     public void deleteUser(String id) {
         UUID uuid = UUID.fromString(id);
         User user = findUserById(uuid);
@@ -77,24 +77,25 @@ public class UserService {
         checkOwnership(user);
 
         // Perform manual cascade deletion in correct order to satisfy foreign key constraints
+        String uuidStr = uuid.toString();
         
         // 1. Delete all votes related to the user's activity or owned content
-        userRepository.deleteVotesByIdeasLinkedToTopicsOwnedByUserId(uuid);
-        userRepository.deleteVotesByIdeasOwnedByUserId(uuid);
-        userRepository.deleteVotesByUserId(uuid);
+        userRepository.deleteVotesByIdeasLinkedToTopicsOwnedByUserId(uuidStr);
+        userRepository.deleteVotesByIdeasOwnedByUserId(uuidStr);
+        userRepository.deleteVotesByUserId(uuidStr);
         userRepository.flush(); // Flush after deleting all votes
 
         // 2. Delete all ideas related to the user or their topics
-        userRepository.deleteIdeasLinkedToTopicsOwnedByUserId(uuid);
-        userRepository.deleteIdeasByUserId(uuid);
+        userRepository.deleteIdeasLinkedToTopicsOwnedByUserId(uuidStr);
+        userRepository.deleteIdeasByUserId(uuidStr);
         userRepository.flush(); // Flush after deleting all ideas
 
         // 3. Delete all topics owned by the user
-        userRepository.deleteTopicsByUserId(uuid);
+        userRepository.deleteTopicsByUserId(uuidStr);
         userRepository.flush(); // Flush after deleting all topics
 
         // 4. Finally delete the user using a native query
-        userRepository.deleteUserByIdNative(uuid);
+        userRepository.deleteUserByIdNative(uuidStr);
         userRepository.flush(); // Final flush
     }
 

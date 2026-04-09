@@ -28,27 +28,31 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByLogin(String login);
     boolean existsByLoginAndIdNot(String login, UUID id);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = "DELETE FROM votes WHERE user_id = :userId", nativeQuery = true)
-    void deleteVotesByUserId(@Param("userId") UUID userId);
+    void deleteVotesByUserId(@Param("userId") String userId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = "DELETE FROM votes WHERE idea_id IN (SELECT id FROM ideas WHERE owner_id = :userId)", nativeQuery = true)
-    void deleteVotesByIdeasOwnedByUserId(@Param("userId") UUID userId);
+    void deleteVotesByIdeasOwnedByUserId(@Param("userId") String userId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = "DELETE FROM votes WHERE idea_id IN (SELECT i.id FROM ideas i JOIN topics t ON i.topic_id = t.id WHERE t.owner_id = :userId)", nativeQuery = true)
-    void deleteVotesByIdeasLinkedToTopicsOwnedByUserId(@Param("userId") UUID userId);
+    void deleteVotesByIdeasLinkedToTopicsOwnedByUserId(@Param("userId") String userId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = "DELETE FROM ideas WHERE owner_id = :userId", nativeQuery = true)
-    void deleteIdeasByUserId(@Param("userId") UUID userId);
+    void deleteIdeasByUserId(@Param("userId") String userId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = "DELETE FROM ideas WHERE topic_id IN (SELECT id FROM topics WHERE owner_id = :userId)", nativeQuery = true)
-    void deleteIdeasLinkedToTopicsOwnedByUserId(@Param("userId") UUID userId);
+    void deleteIdeasLinkedToTopicsOwnedByUserId(@Param("userId") String userId);
 
-    @Modifying
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query(value = "DELETE FROM topics WHERE owner_id = :userId", nativeQuery = true)
-    void deleteTopicsByUserId(@Param("userId") UUID userId);
+    void deleteTopicsByUserId(@Param("userId") String userId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "DELETE FROM users WHERE id = :userId", nativeQuery = true)
+    void deleteUserByIdNative(@Param("userId") String userId);
 }

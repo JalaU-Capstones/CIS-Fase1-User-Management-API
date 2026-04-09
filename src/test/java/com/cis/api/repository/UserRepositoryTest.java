@@ -181,16 +181,16 @@ class UserRepositoryTest {
         assertThat(countVotes(userId)).isEqualTo(1);
 
         // 6. Execute Deletions (mimicking UserService order)
-        userRepository.deleteVotesByUserId(userId);
-        userRepository.deleteVotesByIdeasOwnedByUserId(userId);
-        userRepository.deleteVotesByIdeasLinkedToTopicsOwnedByUserId(userId);
+        userRepository.deleteVotesByUserId(userId.toString());
+        userRepository.deleteVotesByIdeasOwnedByUserId(userId.toString());
+        userRepository.deleteVotesByIdeasLinkedToTopicsOwnedByUserId(userId.toString());
         
-        userRepository.deleteIdeasByUserId(userId);
-        userRepository.deleteIdeasLinkedToTopicsOwnedByUserId(userId);
+        userRepository.deleteIdeasByUserId(userId.toString());
+        userRepository.deleteIdeasLinkedToTopicsOwnedByUserId(userId.toString());
         
-        userRepository.deleteTopicsByUserId(userId);
+        userRepository.deleteTopicsByUserId(userId.toString());
         
-        userRepository.deleteById(userId);
+        userRepository.deleteUserByIdNative(userId.toString()); // Changed from deleteById to deleteUserByIdNative
         entityManager.flush();
 
         // 7. Verify all gone

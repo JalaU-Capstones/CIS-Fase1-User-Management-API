@@ -204,15 +204,22 @@ class UserServiceTest {
     @Test
     void shouldDeleteUserWhenOwner() {
         UUID id = UUID.randomUUID();
+        String idStr = id.toString();
         String login = "owner";
         User user = new User(id, "Test", login, "pass");
         
         mockAuthentication(login);
         given(userRepository.findById(id)).willReturn(Optional.of(user));
         
-        userService.deleteUser(id.toString());
+        userService.deleteUser(idStr);
         
-        then(userRepository).should().deleteById(id);
+        then(userRepository).should().deleteVotesByIdeasLinkedToTopicsOwnedByUserId(idStr);
+        then(userRepository).should().deleteVotesByIdeasOwnedByUserId(idStr);
+        then(userRepository).should().deleteVotesByUserId(idStr);
+        then(userRepository).should().deleteIdeasLinkedToTopicsOwnedByUserId(idStr);
+        then(userRepository).should().deleteIdeasByUserId(idStr);
+        then(userRepository).should().deleteTopicsByUserId(idStr);
+        then(userRepository).should().deleteUserByIdNative(idStr);
     }
 
     @Test
@@ -237,6 +244,6 @@ class UserServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("User not found");
         
-        then(userRepository).should(never()).deleteById(any());
+        then(userRepository).should(never()).deleteUserByIdNative(any());
     }
 }
