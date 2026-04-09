@@ -29,11 +29,11 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     boolean existsByLoginAndIdNot(String login, UUID id);
 
     @Modifying
-    @Query(value = "DELETE FROM topics WHERE user_id = :userId", nativeQuery = true)
+    @Query(value = "DELETE FROM topics WHERE owner_id = :userId", nativeQuery = true)
     void deleteTopicsByUserId(@Param("userId") UUID userId);
 
     @Modifying
-    @Query(value = "DELETE FROM ideas WHERE user_id = :userId", nativeQuery = true)
+    @Query(value = "DELETE FROM ideas WHERE owner_id = :userId", nativeQuery = true)
     void deleteIdeasByUserId(@Param("userId") UUID userId);
 
     @Modifying
