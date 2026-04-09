@@ -76,11 +76,15 @@ public class UserService {
 
         checkOwnership(user);
 
-        // Perform cascade deletion for related records
-        userRepository.deleteTopicsByUserId(uuid);
-        userRepository.deleteIdeasByUserId(uuid);
+        // Perform cascade deletion for related records in the correct order
+        // 1. Delete votes (dependent on ideas)
         userRepository.deleteVotesByUserId(uuid);
+        // 2. Delete ideas (dependent on topics and users)
+        userRepository.deleteIdeasByUserId(uuid);
+        // 3. Delete topics (dependent on users)
+        userRepository.deleteTopicsByUserId(uuid);
 
+        // 4. Delete the user
         userRepository.deleteById(uuid);
     }
 
