@@ -5,6 +5,9 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.test.context.jdbc.Sql;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.UUID;
@@ -19,6 +22,9 @@ class UserRepositoryTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @Test
     void shouldFindAllUsers() {
@@ -142,5 +148,63 @@ class UserRepositoryTest {
         assertThat(userRepository.findById(id1)).isEmpty();
         assertThat(userRepository.findById(id2)).isPresent();
         assertThat(userRepository.findAll()).hasSize(1);
+    }
+
+    @Test
+    @Transactional
+    @Sql("/init.sql")
+    void shouldDeleteTopicsIdeasAndVotesInCascade() {
+        // 1. Create User
+        UUID userId = UUID.randomUUID();
+        User user = new User(userId, "Cascade Owner", "cascade", "pass");
+        entityManager.persist(user);
+        entityManager.flush();
+
+        // 2. Create Topic owned by user
+        UUID topicId = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO topics (id, title, description, status, owner_id) VALUES (?, ?, ?, ?, ?)",
+                topicId.toString(), "Title", "Desc", "OPEN", userId.toString());
+
+        // 3. Create Idea for Topic, owned by user
+        UUID ideaId = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO ideas (id, content, topic_id, owner_id) VALUES (?, ?, ?, ?)",
+                ideaId.toString(), "Idea content", topicId.toString(), userId.toString());
+
+        // 4. Create Vote for Idea, by user
+        UUID voteId = UUID.randomUUID();
+        jdbcTemplate.update("INSERT INTO votes (id, idea_id, user_id) VALUES (?, ?, ?)",
+                voteId.toString(), ideaId.toString(), userId.toString());
+
+        // 5. Verify they exist
+        assertThat(count("topics", userId)).isEqualTo(1);
+        assertThat(count("ideas", userId)).isEqualTo(1);
+        assertThat(countVotes(userId)).isEqualTo(1);
+
+        // 6. Execute Deletions (mimicking UserService order)
+        userRepository.deleteVotesByUserId(userId.toString());
+        userRepository.deleteVotesByIdeasOwnedByUserId(userId.toString());
+        userRepository.deleteVotesByIdeasLinkedToTopicsOwnedByUserId(userId.toString());
+        
+        userRepository.deleteIdeasByUserId(userId.toString());
+        userRepository.deleteIdeasLinkedToTopicsOwnedByUserId(userId.toString());
+        
+        userRepository.deleteTopicsByUserId(userId.toString());
+        
+        userRepository.deleteUserByIdNative(userId.toString()); // Changed from deleteById to deleteUserByIdNative
+        entityManager.flush();
+
+        // 7. Verify all gone
+        assertThat(userRepository.findById(userId)).isEmpty();
+        assertThat(count("topics", userId)).isZero();
+        assertThat(count("ideas", userId)).isZero();
+        assertThat(countVotes(userId)).isZero();
+    }
+
+    private Integer count(String table, UUID userId) {
+        return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM " + table + " WHERE owner_id = ?", Integer.class, userId.toString());
+    }
+
+    private Integer countVotes(UUID userId) {
+        return jdbcTemplate.queryForObject("SELECT COUNT(*) FROM votes WHERE user_id = ?", Integer.class, userId.toString());
     }
 }

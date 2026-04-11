@@ -1,6 +1,5 @@
 package com.cis.api.controller;
 
-import com.cis.api.config.AccessLevelProperties;
 import com.cis.api.config.ApplicationConfig;
 import com.cis.api.config.SecurityConfig;
 import com.cis.api.dto.UserRequestDto;
@@ -33,8 +32,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(UserController.class)
-@Import({SecurityConfig.class, ApplicationConfig.class, JwtAuthenticationFilter.class, CustomAuthenticationEntryPoint.class,
-        AccessLevelProperties.class})
+@Import({SecurityConfig.class, ApplicationConfig.class, JwtAuthenticationFilter.class, CustomAuthenticationEntryPoint.class})
 @TestPropertySource(properties = {
         "application-properties.jwt.secret-key=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970",
         "application-properties.jwt.expiration-time=864000000"
@@ -158,11 +156,12 @@ class UserControllerTest {
 
     @Test
     @WithMockUser
-    void deleteUser_WithExistingId_ShouldReturn204() throws Exception {
+    void deleteUser_WithExistingId_ShouldReturn200() throws Exception {
         UUID id = UUID.randomUUID();
         
         mockMvc.perform(delete("/api/v1/users/" + id))
-                .andExpect(status().isNoContent());
+                .andExpect(status().isOk())
+                .andExpect(content().string("User and all related topics, ideas, and votes have been successfully deleted."));
     }
 
     @Test

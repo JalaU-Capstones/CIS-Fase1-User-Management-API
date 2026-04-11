@@ -9,7 +9,3 @@ application-properties:
   jwt:
     secret-key: "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"
     expiration-time: 864000000 # 10 days
-
-api:
-  security:
-    public-read-endpoints: true   # true = GET público , false = requiere JWT

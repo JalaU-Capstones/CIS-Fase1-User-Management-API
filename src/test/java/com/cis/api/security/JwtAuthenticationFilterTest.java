@@ -3,11 +3,14 @@ package com.cis.api.security;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -27,6 +30,16 @@ class JwtAuthenticationFilterTest {
 
     @InjectMocks
     private JwtAuthenticationFilter jwtAuthenticationFilter;
+
+    @BeforeEach
+    void setUp() {
+        SecurityContextHolder.clearContext();
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
+    }
 
     @Test
     void shouldAuthenticateValidToken() throws Exception {
@@ -59,6 +72,56 @@ class JwtAuthenticationFilterTest {
 
         verify(filterChain).doFilter(request, response);
         verifyNoInteractions(jwtService);
+        verifyNoInteractions(userDetailsService);
+    }
+
+    @Test
+    void shouldSkipFilterWhenInvalidHeader() throws Exception {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        FilterChain filterChain = mock(FilterChain.class);
+
+        when(request.getHeader("Authorization")).thenReturn("InvalidHeader token");
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        verify(filterChain).doFilter(request, response);
+        verifyNoInteractions(jwtService);
+        verifyNoInteractions(userDetailsService);
+    }
+
+    @Test
+    void shouldSkipAuthenticationWhenTokenInvalid() throws Exception {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        FilterChain filterChain = mock(FilterChain.class);
+
+        when(request.getHeader("Authorization")).thenReturn("Bearer invalid.token");
+        when(jwtService.extractUsername("invalid.token")).thenReturn("user");
+
+        UserDetails userDetails = new User("user", "pass", Collections.emptyList());
+        when(userDetailsService.loadUserByUsername("user")).thenReturn(userDetails);
+        when(jwtService.isTokenValid("invalid.token", userDetails)).thenReturn(false);
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        verify(filterChain).doFilter(request, response);
+        verify(userDetailsService).loadUserByUsername("user");
+        verify(jwtService).isTokenValid("invalid.token", userDetails);
+    }
+
+    @Test
+    void shouldSkipAuthenticationWhenUsernameIsNull() throws Exception {
+        HttpServletRequest request = mock(HttpServletRequest.class);
+        HttpServletResponse response = mock(HttpServletResponse.class);
+        FilterChain filterChain = mock(FilterChain.class);
+
+        when(request.getHeader("Authorization")).thenReturn("Bearer invalid.token");
+        when(jwtService.extractUsername("invalid.token")).thenReturn(null);
+
+        jwtAuthenticationFilter.doFilterInternal(request, response, filterChain);
+
+        verify(filterChain).doFilter(request, response);
         verifyNoInteractions(userDetailsService);
     }
 }

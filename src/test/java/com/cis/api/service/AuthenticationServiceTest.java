@@ -35,17 +35,36 @@ class AuthenticationServiceTest {
     private AuthenticationService authenticationService;
 
     @Test
-    void shouldAuthenticateAndReturnToken() {
+    void shouldAuthenticateAndReturnTokenWithBcrypt() {
         AuthRequest request = new AuthRequest("user", "pass");
         UserDetails userDetails = mock(UserDetails.class);
         
         given(userDetailsService.loadUserByUsername("user")).willReturn(userDetails);
+        given(userDetails.getPassword()).willReturn("$2a$10$somehashedpassword");
         given(jwtService.generateToken(userDetails)).willReturn("jwt-token");
 
         AuthResponse response = authenticationService.authenticate(request);
 
         assertThat(response).isNotNull();
         assertThat(response.token()).isEqualTo("jwt-token");
+        assertThat(response.message()).isNull();
+        then(authenticationManager).should().authenticate(any(UsernamePasswordAuthenticationToken.class));
+    }
+
+    @Test
+    void shouldAuthenticateAndReturnTokenWithPlaintextWarning() {
+        AuthRequest request = new AuthRequest("user", "pass");
+        UserDetails userDetails = mock(UserDetails.class);
+
+        given(userDetailsService.loadUserByUsername("user")).willReturn(userDetails);
+        given(userDetails.getPassword()).willReturn("plaintext-password");
+        given(jwtService.generateToken(userDetails)).willReturn("jwt-token");
+
+        AuthResponse response = authenticationService.authenticate(request);
+
+        assertThat(response).isNotNull();
+        assertThat(response.token()).isEqualTo("jwt-token");
+        assertThat(response.message()).contains("For security reasons, please change your password");
         then(authenticationManager).should().authenticate(any(UsernamePasswordAuthenticationToken.class));
     }
 }

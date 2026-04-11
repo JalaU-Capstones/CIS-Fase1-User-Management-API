@@ -7,6 +7,9 @@ import com.cis.api.exception.ResourceNotFoundException;
 import com.cis.api.model.User;
 import com.cis.api.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,6 +55,8 @@ public class UserService {
         UUID uuid = UUID.fromString(id);
         User user = findUserById(uuid);
 
+        checkOwnership(user);
+
         if (!user.getLogin().equals(request.login())) {
             validateLoginUniqueness(request.login(), uuid);
         }
@@ -64,18 +69,54 @@ public class UserService {
         return userMapper.toDto(userRepository.save(user));
     }
 
-    @Transactional
+    @Transactional(readOnly = false)
     public void deleteUser(String id) {
         UUID uuid = UUID.fromString(id);
-        if (!userRepository.existsById(uuid)) {
-            throw new ResourceNotFoundException("User not found with id: " + id);
-        }
-        userRepository.deleteById(uuid);
+        User user = findUserById(uuid);
+
+        checkOwnership(user);
+
+        // Perform manual cascade deletion in correct order to satisfy foreign key constraints
+        String uuidStr = uuid.toString();
+        
+        // 1. Delete all votes related to the user's activity or owned content
+        userRepository.deleteVotesByIdeasLinkedToTopicsOwnedByUserId(uuidStr);
+        userRepository.deleteVotesByIdeasOwnedByUserId(uuidStr);
+        userRepository.deleteVotesByUserId(uuidStr);
+        userRepository.flush(); // Flush after deleting all votes
+
+        // 2. Delete all ideas related to the user or their topics
+        userRepository.deleteIdeasLinkedToTopicsOwnedByUserId(uuidStr);
+        userRepository.deleteIdeasByUserId(uuidStr);
+        userRepository.flush(); // Flush after deleting all ideas
+
+        // 3. Delete all topics owned by the user
+        userRepository.deleteTopicsByUserId(uuidStr);
+        userRepository.flush(); // Flush after deleting all topics
+
+        // 4. Finally delete the user using a native query
+        userRepository.deleteUserByIdNative(uuidStr);
+        userRepository.flush(); // Final flush
     }
 
     private User findUserById(UUID id) {
         return userRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+    }
+
+    private void checkOwnership(User user) {
+        String currentUserLogin = getCurrentUserLogin();
+        if (!user.getLogin().equals(currentUserLogin)) {
+            throw new AccessDeniedException("You can only modify your own user record.");
+        }
+    }
+
+    private String getCurrentUserLogin() {
+        Object principal = SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (principal instanceof UserDetails) {
+            return ((UserDetails) principal).getUsername();
+        }
+        return principal.toString();
     }
 
     private void validateLoginUniqueness(String login) {

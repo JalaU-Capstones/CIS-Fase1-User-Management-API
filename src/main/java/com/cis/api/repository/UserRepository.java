@@ -2,6 +2,9 @@ package com.cis.api.repository;
 
 import com.cis.api.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
@@ -24,4 +27,32 @@ public interface UserRepository extends JpaRepository<User, UUID> {
     // Method for US 1.2.1
     boolean existsByLogin(String login);
     boolean existsByLoginAndIdNot(String login, UUID id);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "DELETE FROM votes WHERE user_id = :userId", nativeQuery = true)
+    void deleteVotesByUserId(@Param("userId") String userId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "DELETE FROM votes WHERE idea_id IN (SELECT id FROM ideas WHERE owner_id = :userId)", nativeQuery = true)
+    void deleteVotesByIdeasOwnedByUserId(@Param("userId") String userId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "DELETE FROM votes WHERE idea_id IN (SELECT i.id FROM ideas i JOIN topics t ON i.topic_id = t.id WHERE t.owner_id = :userId)", nativeQuery = true)
+    void deleteVotesByIdeasLinkedToTopicsOwnedByUserId(@Param("userId") String userId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "DELETE FROM ideas WHERE owner_id = :userId", nativeQuery = true)
+    void deleteIdeasByUserId(@Param("userId") String userId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "DELETE FROM ideas WHERE topic_id IN (SELECT id FROM topics WHERE owner_id = :userId)", nativeQuery = true)
+    void deleteIdeasLinkedToTopicsOwnedByUserId(@Param("userId") String userId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "DELETE FROM topics WHERE owner_id = :userId", nativeQuery = true)
+    void deleteTopicsByUserId(@Param("userId") String userId);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query(value = "DELETE FROM users WHERE id = :userId", nativeQuery = true)
+    void deleteUserByIdNative(@Param("userId") String userId);
 }
