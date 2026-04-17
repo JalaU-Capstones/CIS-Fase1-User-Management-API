@@ -18,7 +18,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "Users V2", description = "Operations related to user management (MongoDB)")
+/**
+ * Controller for user management V2 (MongoDB).
+ */
+@Tag(name = "Users V2", description = "Operations related to user management using MongoDB")
 @RestController
 @RequestMapping("/api/v2/users")
 @RequiredArgsConstructor
