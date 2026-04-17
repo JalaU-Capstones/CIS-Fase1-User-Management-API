@@ -1,6 +1,5 @@
 package com.cis.api.service;
 
-import com.cis.api.dto.UserMapper;
 import com.cis.api.dto.UserRequestDto;
 import com.cis.api.dto.UserResponseDto;
 import com.cis.api.exception.ResourceNotFoundException;
@@ -40,9 +39,6 @@ class MongoUserServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
-    @Mock
-    private UserMapper userMapper;
-
     @InjectMocks
     private MongoUserService mongoUserService;
 
@@ -69,9 +65,7 @@ class MongoUserServiceTest {
     @Test
     void shouldReturnListOfUsersAsDtos() {
         User user = new User(UUID.randomUUID(), "Mongo User", "mongo", "pass");
-        UserResponseDto userResponseDto = new UserResponseDto(user.getId(), user.getName(), user.getLogin());
         given(mongoPersistencePort.findAll()).willReturn(List.of(user));
-        given(userMapper.toDto(user)).willReturn(userResponseDto);
 
         List<UserResponseDto> result = mongoUserService.getAllUsers();
 
@@ -83,9 +77,7 @@ class MongoUserServiceTest {
     void shouldGetUserById() {
         UUID id = UUID.randomUUID();
         User user = new User(id, "Mongo", "mongo", "pass");
-        UserResponseDto userResponseDto = new UserResponseDto(user.getId(), user.getName(), user.getLogin());
         given(mongoPersistencePort.findById(id)).willReturn(Optional.of(user));
-        given(userMapper.toDto(user)).willReturn(userResponseDto);
 
         UserResponseDto result = mongoUserService.getUserById(id.toString());
 
@@ -96,12 +88,10 @@ class MongoUserServiceTest {
     void shouldCreateUser() {
         UserRequestDto request = new UserRequestDto("Name", "mongo", "pass");
         User savedUser = new User(UUID.randomUUID(), "Name", "mongo", "encodedPass");
-        UserResponseDto userResponseDto = new UserResponseDto(savedUser.getId(), savedUser.getName(), savedUser.getLogin());
 
         given(mongoPersistencePort.existsByLogin("mongo")).willReturn(false);
         given(passwordEncoder.encode("pass")).willReturn("encodedPass");
         given(mongoPersistencePort.save(any(User.class))).willReturn(savedUser);
-        given(userMapper.toDto(savedUser)).willReturn(userResponseDto);
 
         UserResponseDto response = mongoUserService.createUser(request);
 

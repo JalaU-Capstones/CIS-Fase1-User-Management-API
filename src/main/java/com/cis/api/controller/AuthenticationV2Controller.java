@@ -46,7 +46,7 @@ public class AuthenticationV2Controller {
                             examples = @ExampleObject(value = "{\"status\": 401, \"error\": \"Unauthorized\", \"message\": \"Invalid credentials\"}")))
     })
     @PostMapping("/login")
-    public ResponseEntity<AuthResponse> login(@RequestBody @org.springframework.web.bind.annotation.RequestBody AuthRequest request) {
+    public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {
         return ResponseEntity.ok(authenticationService.authenticate(request));
     }
 }

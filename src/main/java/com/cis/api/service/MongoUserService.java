@@ -22,29 +22,27 @@ public class MongoUserService {
 
     private final MongoPersistencePort mongoPersistencePort;
     private final PasswordEncoder passwordEncoder;
-    private final UserMapper userMapper;
 
     public List<UserResponseDto> getAllUsers() {
         return mongoPersistencePort.findAll().stream()
-                .map(userMapper::toDto)
+                .map(UserMapper::toResponseDto)
                 .toList();
     }
 
     public UserResponseDto getUserById(String id) {
         return mongoPersistencePort.findById(UUID.fromString(id))
-                .map(userMapper::toDto)
+                .map(UserMapper::toResponseDto)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
     }
 
     public UserResponseDto createUser(UserRequestDto request) {
         validateLoginUniqueness(request.login());
 
-        User user = new User();
+        User user = UserMapper.toEntity(request);
         user.setId(UUID.randomUUID());
-        userMapper.updateUserFromDto(request, user);
         user.setPassword(passwordEncoder.encode(request.password()));
 
-        return userMapper.toDto(mongoPersistencePort.save(user));
+        return UserMapper.toResponseDto(mongoPersistencePort.save(user));
     }
 
     public UserResponseDto updateUser(String id, UserRequestDto request) {
@@ -57,12 +55,13 @@ public class MongoUserService {
             validateLoginUniqueness(request.login(), uuid);
         }
 
-        userMapper.updateUserFromDto(request, user);
+        user.setName(request.name());
+        user.setLogin(request.login());
         if (request.password() != null && !request.password().isBlank()) {
             user.setPassword(passwordEncoder.encode(request.password()));
         }
 
-        return userMapper.toDto(mongoPersistencePort.save(user));
+        return UserMapper.toResponseDto(mongoPersistencePort.save(user));
     }
 
     public void deleteUser(String id) {

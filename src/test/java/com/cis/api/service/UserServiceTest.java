@@ -1,6 +1,5 @@
 package com.cis.api.service;
 
-import com.cis.api.dto.UserMapper;
 import com.cis.api.dto.UserRequestDto;
 import com.cis.api.dto.UserResponseDto;
 import com.cis.api.exception.ResourceNotFoundException;
@@ -41,9 +40,6 @@ class UserServiceTest {
     @Mock
     private PasswordEncoder passwordEncoder;
 
-    @Mock
-    private UserMapper userMapper;
-
     @InjectMocks
     private UserService userService;
 
@@ -70,9 +66,7 @@ class UserServiceTest {
     @Test
     void shouldReturnListOfUsersAsDtos() {
         User user = new User(UUID.randomUUID(), "Test User", "test", "pass");
-        UserResponseDto userResponseDto = new UserResponseDto(user.getId(), user.getName(), user.getLogin());
         given(userPersistencePort.findAll()).willReturn(List.of(user));
-        given(userMapper.toDto(user)).willReturn(userResponseDto);
 
         List<UserResponseDto> result = userService.getAllUsers();
 
@@ -95,9 +89,7 @@ class UserServiceTest {
     void shouldGetUserById() {
         UUID id = UUID.randomUUID();
         User user = new User(id, "Test", "test", "pass");
-        UserResponseDto userResponseDto = new UserResponseDto(user.getId(), user.getName(), user.getLogin());
         given(userPersistencePort.findById(id)).willReturn(Optional.of(user));
-        given(userMapper.toDto(user)).willReturn(userResponseDto);
         
         UserResponseDto result = userService.getUserById(id.toString());
         
@@ -108,12 +100,10 @@ class UserServiceTest {
     void shouldCreateUser() {
         UserRequestDto request = new UserRequestDto("Name", "login", "pass");
         User savedUser = new User(UUID.randomUUID(), "Name", "login", "encodedPass");
-        UserResponseDto userResponseDto = new UserResponseDto(savedUser.getId(), savedUser.getName(), savedUser.getLogin());
         
         given(userPersistencePort.existsByLogin("login")).willReturn(false);
         given(passwordEncoder.encode("pass")).willReturn("encodedPass");
         given(userPersistencePort.save(any(User.class))).willReturn(savedUser);
-        given(userMapper.toDto(savedUser)).willReturn(userResponseDto);
         
         UserResponseDto response = userService.createUser(request);
         
@@ -138,13 +128,11 @@ class UserServiceTest {
         UserRequestDto request = new UserRequestDto("New Name", login, "newpass");
         User existingUser = new User(id, "Old Name", login, "pass");
         User updatedUser = new User(id, "New Name", login, "encodedNewPass");
-        UserResponseDto userResponseDto = new UserResponseDto(updatedUser.getId(), updatedUser.getName(), updatedUser.getLogin());
 
         mockAuthentication(login);
         given(userPersistencePort.findById(id)).willReturn(Optional.of(existingUser));
         given(passwordEncoder.encode("newpass")).willReturn("encodedNewPass");
         given(userPersistencePort.save(existingUser)).willReturn(updatedUser);
-        given(userMapper.toDto(updatedUser)).willReturn(userResponseDto);
 
         UserResponseDto response = userService.updateUser(id.toString(), request);
         
@@ -158,12 +146,10 @@ class UserServiceTest {
         UserRequestDto request = new UserRequestDto("New Name", login, "");
         User existingUser = new User(id, "Old Name", login, "pass");
         User updatedUser = new User(id, "New Name", login, "pass");
-        UserResponseDto userResponseDto = new UserResponseDto(updatedUser.getId(), updatedUser.getName(), updatedUser.getLogin());
 
         mockAuthentication(login);
         given(userPersistencePort.findById(id)).willReturn(Optional.of(existingUser));
         given(userPersistencePort.save(existingUser)).willReturn(updatedUser);
-        given(userMapper.toDto(updatedUser)).willReturn(userResponseDto);
 
         UserResponseDto response = userService.updateUser(id.toString(), request);
         

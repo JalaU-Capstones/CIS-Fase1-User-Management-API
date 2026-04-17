@@ -1,12 +1,12 @@
 package com.cis.api.dto;
 
+import com.cis.api.model.MongoUser;
 import com.cis.api.model.User;
-import org.springframework.stereotype.Component;
+import java.util.UUID;
 
-@Component
 public class UserMapper {
 
-    public UserResponseDto toDto(User user) {
+    public static UserResponseDto toResponseDto(User user) {
         return new UserResponseDto(
                 user.getId(),
                 user.getName(),
@@ -14,8 +14,27 @@ public class UserMapper {
         );
     }
 
-    public void updateUserFromDto(UserRequestDto dto, User user) {
+    public static UserResponseDto toResponseDto(MongoUser user) {
+        return new UserResponseDto(
+                user.getId() != null ? UUID.fromString(user.getId()) : null,
+                user.getName(),
+                user.getLogin()
+        );
+    }
+
+    public static User toEntity(UserRequestDto dto) {
+        User user = new User();
         user.setName(dto.name());
         user.setLogin(dto.login());
+        user.setPassword(dto.password());
+        return user;
+    }
+
+    public static MongoUser toMongoEntity(UserRequestDto dto) {
+        MongoUser user = new MongoUser();
+        user.setName(dto.name());
+        user.setLogin(dto.login());
+        user.setPassword(dto.password());
+        return user;
     }
 }
