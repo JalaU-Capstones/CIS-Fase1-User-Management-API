@@ -11,8 +11,13 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: create-drop   # OK for tests only - recreates schema each test run
+      ddl-auto: create-drop
     show-sql: true
+    open-in-view: false
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/user_management_test
 
 application-properties:
   jwt:

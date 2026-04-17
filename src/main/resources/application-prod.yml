@@ -3,6 +3,9 @@ spring:
     activate:
       on-profile: prod
 
+  jpa:
+    open-in-view: false
+
 springdoc:
   swagger-ui:
     enabled: false

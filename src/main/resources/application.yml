@@ -4,6 +4,8 @@ spring:
     group:
       "prod":
         - "prod"
+  jpa:
+    open-in-view: false
 
 db:
   type: mysql

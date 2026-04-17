@@ -12,6 +12,9 @@ spring:
     mongodb:
       uri: mongodb://localhost:27017/user_management
 
+  jpa:
+    open-in-view: false
+
 springdoc:
   swagger-ui:
     enabled: true

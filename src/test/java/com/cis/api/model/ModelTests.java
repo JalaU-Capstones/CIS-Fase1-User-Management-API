@@ -32,6 +32,37 @@ class ModelTests {
     }
 
     @Test
+    void userEqualsHashCodeToStringTest() {
+        UUID id = UUID.randomUUID();
+        User user1 = new User(id, "Name", "login", "pass");
+        User user2 = new User(id, "Name", "login", "pass");
+        User user3 = new User(UUID.randomUUID(), "Other", "other", "other");
+
+        assertThat(user1).isEqualTo(user2);
+        assertThat(user1.hashCode()).isEqualTo(user2.hashCode());
+        assertThat(user1).isNotEqualTo(user3);
+        assertThat(user1.toString()).contains("Name", "login");
+        assertThat(user1.equals(user1)).isTrue();
+        assertThat(user1.equals(null)).isFalse();
+        assertThat(user1.equals(new Object())).isFalse();
+        
+        // Covering branches in equals
+        User user1_diffName = new User(id, "Diff", "login", "pass");
+        assertThat(user1).isNotEqualTo(user1_diffName);
+        
+        User user1_diffLogin = new User(id, "Name", "diff", "pass");
+        assertThat(user1).isNotEqualTo(user1_diffLogin);
+        
+        User user1_diffPass = new User(id, "Name", "login", "diff");
+        assertThat(user1).isNotEqualTo(user1_diffPass);
+
+        User user4 = new User();
+        User user5 = new User();
+        assertThat(user4).isEqualTo(user5);
+        assertThat(user4.canEqual(user5)).isTrue();
+    }
+
+    @Test
     void mongoUserModelTest() {
         String id = UUID.randomUUID().toString();
         MongoUser user = new MongoUser(id, "Name", "login", "pass");
@@ -49,6 +80,37 @@ class ModelTests {
         assertThat(emptyUser.getName()).isEqualTo("Name");
         assertThat(emptyUser.getLogin()).isEqualTo("login");
         assertThat(emptyUser.getPassword()).isEqualTo("pass");
+    }
+
+    @Test
+    void mongoUserEqualsHashCodeToStringTest() {
+        String id = UUID.randomUUID().toString();
+        MongoUser user1 = new MongoUser(id, "Name", "login", "pass");
+        MongoUser user2 = new MongoUser(id, "Name", "login", "pass");
+        MongoUser user3 = new MongoUser("other", "Other", "other", "other");
+
+        assertThat(user1).isEqualTo(user2);
+        assertThat(user1.hashCode()).isEqualTo(user2.hashCode());
+        assertThat(user1).isNotEqualTo(user3);
+        assertThat(user1.toString()).contains("Name", "login");
+        assertThat(user1.equals(user1)).isTrue();
+        assertThat(user1.equals(null)).isFalse();
+        assertThat(user1.equals(new Object())).isFalse();
+
+        // Covering branches in equals
+        MongoUser user1_diffName = new MongoUser(id, "Diff", "login", "pass");
+        assertThat(user1).isNotEqualTo(user1_diffName);
+
+        MongoUser user1_diffLogin = new MongoUser(id, "Name", "diff", "pass");
+        assertThat(user1).isNotEqualTo(user1_diffLogin);
+
+        MongoUser user1_diffPass = new MongoUser(id, "Name", "login", "diff");
+        assertThat(user1).isNotEqualTo(user1_diffPass);
+
+        MongoUser user4 = new MongoUser();
+        MongoUser user5 = new MongoUser();
+        assertThat(user4).isEqualTo(user5);
+        assertThat(user4.canEqual(user5)).isTrue();
     }
 
     @Test
