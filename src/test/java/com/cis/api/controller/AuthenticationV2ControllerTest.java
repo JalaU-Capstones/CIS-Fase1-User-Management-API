@@ -18,6 +18,7 @@ import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -59,7 +60,7 @@ class AuthenticationV2ControllerTest {
     @Test
     void login_ShouldReturn200AndToken() throws Exception {
         AuthRequest request = new AuthRequest("user", "pass");
-        AuthResponse response = AuthResponse.builder().token("jwt-token").build();
+        AuthResponse response = AuthResponse.builder().token("jwt-token").message("Login successful.").build();
 
         given(authenticationService.authenticate(any(AuthRequest.class))).willReturn(response);
 
@@ -67,6 +68,19 @@ class AuthenticationV2ControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("jwt-token"));
+                .andExpect(jsonPath("$.token").value("jwt-token"))
+                .andExpect(jsonPath("$.message").value("Login successful."));
+    }
+
+    @Test
+    void login_WithInvalidCredentials_ShouldReturn401() throws Exception {
+        AuthRequest request = new AuthRequest("wrong", "pass");
+        given(authenticationService.authenticate(any(AuthRequest.class)))
+                .willThrow(new BadCredentialsException("Invalid credentials"));
+
+        mockMvc.perform(post("/api/v2/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized());
     }
 }

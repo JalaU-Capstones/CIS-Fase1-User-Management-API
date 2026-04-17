@@ -2,8 +2,12 @@ package com.cis.api.controller;
 
 import com.cis.api.dto.AuthRequest;
 import com.cis.api.dto.AuthResponse;
+import com.cis.api.exception.ErrorResponse;
 import com.cis.api.service.AuthenticationService;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -32,8 +36,14 @@ public class AuthenticationController {
      */
     @Operation(summary = "User login", description = "Authenticates a user and returns a JWT token")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "Login successful, JWT token returned"),
-            @ApiResponse(responseCode = "401", description = "Invalid credentials")
+            @ApiResponse(responseCode = "200", description = "Login successful, JWT token returned",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = AuthResponse.class),
+                            examples = @ExampleObject(value = "{\"token\": \"eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJqb2huZG9lIn0.SflKxwRJSMeKKF2QT4fwpMeJf36POk6yJV_adQssw5c\", \"message\": \"Login successful.\"}"))),
+            @ApiResponse(responseCode = "401", description = "Invalid credentials",
+                    content = @Content(mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class),
+                            examples = @ExampleObject(value = "{\"status\": 401, \"error\": \"Unauthorized\", \"message\": \"Invalid credentials\"}")))
     })
     @PostMapping("/login")
     public ResponseEntity<AuthResponse> login(@RequestBody AuthRequest request) {

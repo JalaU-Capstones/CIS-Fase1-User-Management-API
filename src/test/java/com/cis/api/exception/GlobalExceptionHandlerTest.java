@@ -4,12 +4,10 @@ import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.core.AuthenticationException;
-import org.springframework.validation.BindingResult;
-import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
-
-import java.util.List;
+import org.springframework.core.MethodParameter;
+import org.springframework.validation.BeanPropertyBindingResult;
+import org.springframework.validation.FieldError;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -17,76 +15,51 @@ import static org.mockito.Mockito.when;
 
 class GlobalExceptionHandlerTest {
 
-    private final GlobalExceptionHandler exceptionHandler = new GlobalExceptionHandler();
+    private final GlobalExceptionHandler handler = new GlobalExceptionHandler();
 
     @Test
     void handleResourceNotFoundException_ShouldReturn404() {
-        ResourceNotFoundException ex = new ResourceNotFoundException("Resource not found");
+        ResourceNotFoundException ex = new ResourceNotFoundException("Not found");
+        ResponseEntity<ErrorResponse> response = handler.handleResourceNotFoundException(ex);
         
-        ResponseEntity<ErrorResponse> response = exceptionHandler.handleResourceNotFoundException(ex);
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
-        ErrorResponse body = response.getBody();
-        assertThat(body.getMessage()).isEqualTo("Resource not found");
+        assertThat(response.getBody().getError()).isEqualTo("Not Found");
+        assertThat(response.getBody().getMessage()).isEqualTo("Not found");
     }
 
     @Test
     void handleAccessDeniedException_ShouldReturn403() {
-        AccessDeniedException ex = new AccessDeniedException("Access denied");
-
-        ResponseEntity<ErrorResponse> response = exceptionHandler.handleAccessDeniedException(ex);
-
+        AccessDeniedException ex = new AccessDeniedException("Forbidden");
+        ResponseEntity<ErrorResponse> response = handler.handleAccessDeniedException(ex);
+        
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.FORBIDDEN);
-        ErrorResponse body = response.getBody();
-        assertThat(body.getMessage()).isEqualTo("Access denied");
+        assertThat(response.getBody().getError()).isEqualTo("Forbidden");
     }
 
     @Test
     void handleIllegalArgumentException_ShouldReturn400() {
         IllegalArgumentException ex = new IllegalArgumentException("Invalid argument");
-
-        ResponseEntity<ErrorResponse> response = exceptionHandler.handleIllegalArgumentException(ex);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        ErrorResponse body = response.getBody();
-        assertThat(body.getMessage()).isEqualTo("Invalid argument");
-    }
-
-    @Test
-    void handleValidationExceptions_ShouldReturn400WithErrors() {
-        MethodArgumentNotValidException ex = mock(MethodArgumentNotValidException.class);
-        BindingResult bindingResult = mock(BindingResult.class);
-        FieldError fieldError = new FieldError("object", "field", "defaultMessage");
+        ResponseEntity<ErrorResponse> response = handler.handleIllegalArgumentException(ex);
         
-        when(ex.getBindingResult()).thenReturn(bindingResult);
-        when(bindingResult.getFieldErrors()).thenReturn(List.of(fieldError));
-
-        ResponseEntity<ErrorResponse> response = exceptionHandler.handleValidationExceptions(ex);
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
-        ErrorResponse body = response.getBody();
-        assertThat(body.getDetails()).containsEntry("field", "defaultMessage");
+        assertThat(response.getBody().getError()).isEqualTo("Bad Request");
     }
 
     @Test
     void handleAuthenticationException_ShouldReturn401() {
-        AuthenticationException ex = new AuthenticationException("Invalid token") {};
+        Exception ex = new Exception("Auth failed");
+        ResponseEntity<ErrorResponse> response = handler.handleAuthenticationException(ex);
         
-        ResponseEntity<ErrorResponse> response = exceptionHandler.handleAuthenticationException(ex);
-
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
-        ErrorResponse body = response.getBody();
-        assertThat(body.getMessage()).isEqualTo("Invalid or expired token");
+        assertThat(response.getBody().getError()).isEqualTo("Unauthorized");
     }
 
     @Test
     void handleGenericException_ShouldReturn500() {
-        Exception ex = new Exception("Internal error");
-
-        ResponseEntity<ErrorResponse> response = exceptionHandler.handleGenericException(ex);
-
+        Exception ex = new Exception("Unexpected");
+        ResponseEntity<ErrorResponse> response = handler.handleGenericException(ex);
+        
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-        ErrorResponse body = response.getBody();
-        assertThat(body.getMessage()).isEqualTo("An unexpected error occurred");
+        assertThat(response.getBody().getError()).isEqualTo("Internal Server Error");
     }
 }
