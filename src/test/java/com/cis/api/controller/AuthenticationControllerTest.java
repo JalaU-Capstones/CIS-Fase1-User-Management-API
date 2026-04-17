@@ -5,6 +5,7 @@ import com.cis.api.config.SecurityConfig;
 import com.cis.api.dto.AuthRequest;
 import com.cis.api.dto.AuthResponse;
 import com.cis.api.exception.CustomAuthenticationEntryPoint;
+import com.cis.api.repository.MongoPersistencePort;
 import com.cis.api.security.JwtAuthenticationFilter;
 import com.cis.api.security.JwtService;
 import com.cis.api.service.AuthenticationService;
@@ -43,6 +44,9 @@ class AuthenticationControllerTest {
 
     @MockBean
     private CustomUserDetailsService customUserDetailsService;
+
+    @MockBean
+    private MongoPersistencePort mongoPersistencePort;
 
     @Test
     void shouldReturnTokenOnValidLogin() throws Exception {

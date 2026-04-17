@@ -6,6 +6,7 @@ import com.cis.api.dto.UserRequestDto;
 import com.cis.api.dto.UserResponseDto;
 import com.cis.api.exception.CustomAuthenticationEntryPoint;
 import com.cis.api.exception.ResourceNotFoundException;
+import com.cis.api.repository.MongoPersistencePort;
 import com.cis.api.security.JwtAuthenticationFilter;
 import com.cis.api.security.JwtService;
 import com.cis.api.service.CustomUserDetailsService;
@@ -53,6 +54,9 @@ class UserControllerTest {
 
     @MockBean
     private CustomUserDetailsService customUserDetailsService;
+
+    @MockBean
+    private MongoPersistencePort mongoPersistencePort;
 
     @Test
     void getAllUsers_ShouldReturnListOfUsers() throws Exception {
