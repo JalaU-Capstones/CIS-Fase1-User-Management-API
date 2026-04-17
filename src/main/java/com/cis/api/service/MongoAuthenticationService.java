@@ -40,8 +40,18 @@ public class MongoAuthenticationService {
 
         String jwtToken = jwtService.generateToken(userDetails);
 
+        String message = null;
+        String encodedPassword = userDetails.getPassword();
+        if (encodedPassword == null ||
+                !(encodedPassword.startsWith("$2a$") ||
+                  encodedPassword.startsWith("$2b$") ||
+                  encodedPassword.startsWith("$2y$"))) {
+            message = "Login successful. For security reasons, please change your password to enable hashing.";
+        }
+
         return AuthResponse.builder()
                 .token(jwtToken)
+                .message(message)
                 .build();
     }
 }
