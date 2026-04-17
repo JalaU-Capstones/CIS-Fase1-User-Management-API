@@ -35,7 +35,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        log.info("Configuring security: GET /api/v1/users/** is PUBLIC");
+        log.info("Configuring security: GET /api/v1/users/** and /api/v2/users/** are PUBLIC");
 
         return http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -43,6 +43,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(PUBLIC_ENDPOINTS).permitAll();
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/users/**").permitAll();
+                    auth.requestMatchers(HttpMethod.GET, "/api/v2/users/**").permitAll();
                     auth.anyRequest().authenticated();
                 })
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
