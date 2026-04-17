@@ -25,7 +25,7 @@ public class MongoUserRepositoryAdapter implements MongoPersistencePort {
 
     @Override
     public Optional<User> findById(UUID id) {
-        return mongoRepository.findById(id).map(this::toDomain);
+        return mongoRepository.findById(id.toString()).map(this::toDomain);
     }
 
     @Override
@@ -42,7 +42,7 @@ public class MongoUserRepositoryAdapter implements MongoPersistencePort {
 
     @Override
     public void deleteById(UUID id) {
-        mongoRepository.deleteById(id);
+        mongoRepository.deleteById(id.toString());
     }
 
     @Override
@@ -52,17 +52,17 @@ public class MongoUserRepositoryAdapter implements MongoPersistencePort {
 
     @Override
     public boolean existsByLoginAndIdNot(String login, UUID id) {
-        return mongoRepository.existsByLoginAndIdNot(login, id);
+        return mongoRepository.existsByLoginAndIdNot(login, id.toString());
     }
 
     @Override
     public void deleteUserAndRelatedData(UUID id) {
-        mongoRepository.deleteById(id);
+        mongoRepository.deleteById(id.toString());
     }
 
     private User toDomain(MongoUser mongoUser) {
         User user = new User();
-        user.setId(mongoUser.getId());
+        user.setId(UUID.fromString(mongoUser.getId()));
         user.setName(mongoUser.getName());
         user.setLogin(mongoUser.getLogin());
         user.setPassword(mongoUser.getPassword());
@@ -70,6 +70,6 @@ public class MongoUserRepositoryAdapter implements MongoPersistencePort {
     }
 
     private MongoUser toMongo(User user) {
-        return new MongoUser(user.getId(), user.getName(), user.getLogin(), user.getPassword());
+        return new MongoUser(user.getId().toString(), user.getName(), user.getLogin(), user.getPassword());
     }
 }
