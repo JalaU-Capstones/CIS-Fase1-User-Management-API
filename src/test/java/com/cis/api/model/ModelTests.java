@@ -22,7 +22,7 @@ class ModelTests {
 
     @Test
     void mongoUserModelTest() {
-        UUID id = UUID.randomUUID();
+        String id = UUID.randomUUID().toString();
         MongoUser user = new MongoUser(id, "Name", "login", "pass");
         assertThat(user.getId()).isEqualTo(id);
         assertThat(user.getName()).isEqualTo("Name");

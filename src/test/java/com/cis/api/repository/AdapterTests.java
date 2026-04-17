@@ -86,7 +86,7 @@ class AdapterTests {
 
     @Test
     void mongoAdapter_findAll_ShouldCallSpringRepository() {
-        MongoUser mongoUser = new MongoUser(UUID.randomUUID(), "name", "login", "pass");
+        MongoUser mongoUser = new MongoUser(UUID.randomUUID().toString(), "name", "login", "pass");
         given(mongoSpringRepository.findAll()).willReturn(List.of(mongoUser));
         List<User> result = mongoAdapter.findAll();
         assertThat(result).hasSize(1);
@@ -96,16 +96,16 @@ class AdapterTests {
     @Test
     void mongoAdapter_findById_ShouldCallSpringRepository() {
         UUID id = UUID.randomUUID();
-        MongoUser mongoUser = new MongoUser(id, "name", "login", "pass");
-        given(mongoSpringRepository.findById(id)).willReturn(Optional.of(mongoUser));
+        MongoUser mongoUser = new MongoUser(id.toString(), "name", "login", "pass");
+        given(mongoSpringRepository.findById(id.toString())).willReturn(Optional.of(mongoUser));
         Optional<User> result = mongoAdapter.findById(id);
         assertThat(result).isPresent();
-        then(mongoSpringRepository).should().findById(id);
+        then(mongoSpringRepository).should().findById(id.toString());
     }
 
     @Test
     void mongoAdapter_findByLogin_ShouldCallSpringRepository() {
-        MongoUser mongoUser = new MongoUser(UUID.randomUUID(), "name", "login", "pass");
+        MongoUser mongoUser = new MongoUser(UUID.randomUUID().toString(), "name", "login", "pass");
         given(mongoSpringRepository.findByLogin("login")).willReturn(Optional.of(mongoUser));
         Optional<User> result = mongoAdapter.findByLogin("login");
         assertThat(result).isPresent();
@@ -115,7 +115,7 @@ class AdapterTests {
     @Test
     void mongoAdapter_save_ShouldCallSpringRepository() {
         User user = new User(UUID.randomUUID(), "name", "login", "pass");
-        MongoUser mongoUser = new MongoUser(user.getId(), user.getName(), user.getLogin(), user.getPassword());
+        MongoUser mongoUser = new MongoUser(user.getId().toString(), user.getName(), user.getLogin(), user.getPassword());
         given(mongoSpringRepository.save(any(MongoUser.class))).willReturn(mongoUser);
         
         User result = mongoAdapter.save(user);
@@ -135,10 +135,10 @@ class AdapterTests {
     @Test
     void mongoAdapter_existsByLoginAndIdNot_ShouldCallSpringRepository() {
         UUID id = UUID.randomUUID();
-        given(mongoSpringRepository.existsByLoginAndIdNot("login", id)).willReturn(true);
+        given(mongoSpringRepository.existsByLoginAndIdNot("login", id.toString())).willReturn(true);
         boolean result = mongoAdapter.existsByLoginAndIdNot("login", id);
         assertThat(result).isTrue();
-        then(mongoSpringRepository).should().existsByLoginAndIdNot("login", id);
+        then(mongoSpringRepository).should().existsByLoginAndIdNot("login", id.toString());
     }
 
     @Test
@@ -152,6 +152,6 @@ class AdapterTests {
     void mongoAdapter_deleteUserAndRelatedData_ShouldCallSpringRepository() {
         UUID id = UUID.randomUUID();
         mongoAdapter.deleteUserAndRelatedData(id);
-        then(mongoSpringRepository).should().deleteById(id);
+        then(mongoSpringRepository).should().deleteById(id.toString());
     }
 }
