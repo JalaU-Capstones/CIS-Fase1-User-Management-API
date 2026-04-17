@@ -8,6 +8,10 @@ spring:
     username: sd3user
     password: sd3pass
 
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/user_management
+
 springdoc:
   swagger-ui:
     enabled: true

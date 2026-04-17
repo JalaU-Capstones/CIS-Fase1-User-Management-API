@@ -7,9 +7,27 @@ REST API for employee user management (CRUD) that coexists with the legacy CLI U
 - Spring Boot 3.4.x
 - Maven
 - Spring Data JPA + Hibernate (ORM)
+- Spring Data MongoDB
 - MySQL 8 (shared `users` table)
+- MongoDB (v2 storage)
 - JUnit 5 + Mockito + AssertJ (testing)
 - Layered architecture (controllers, services, repositories, DTOs)
+
+## Dual Persistence & Versioning
+This API supports dual persistence:
+- **v1 (/api/v1):** Uses MySQL as the primary data store (default).
+- **v2 (/api/v2):** Uses MongoDB as the primary data store.
+
+### How to switch between MySQL and MongoDB
+The application uses a property `db.type` to decide which repository implementation to use for the default `UserPersistencePort`.
+
+In `application.yml` or as an environment variable:
+```yaml
+db:
+  type: mysql   # or mongo
+```
+
+Regardless of this setting, the `/api/v2` endpoints will always attempt to use the MongoDB adapter via `MongoUserService`.
 
 ## Prerequisites
 - Java 21 (OpenJDK or Eclipse Temurin)
@@ -20,33 +38,28 @@ REST API for employee user management (CRUD) that coexists with the legacy CLI U
 ## Clone the Repository
 ```bash
 git clone https://gitlab.com/jala-university1/cohort-5/ES.CO.CSSD-232.GA.T1.26.M2/secci-n-c/capstone-sd3/idea-flow/CIS-Fase1-User-Management-API.git
-# or SSH
-# git clone git@gitlab.com:jala-university1/cohort-5/ES.CO.CSSD-232.GA.T1.26.M2/secci-n-c/capstone-sd3/idea-flow/CIS-Fase1-User-Management-API.git
 cd CIS-Fase1-User-Management-API
 ```
 
-## Database Setup (Docker MySQL)
-We use Docker to run MySQL 8.0 with the exact legacy schema (no changes allowed).
+## Database Setup (Docker MySQL & MongoDB)
+We use Docker to run MySQL 8.0 and MongoDB.
 
-1. Start the database:
+1. Start the databases:
 ```bash
 docker compose up -d
 ```
 
-2. Verify it's running:
+2. Verify they are running:
 ```bash
 docker ps
-# You should see container 'cis-mysql-phase1'
+# You should see containers 'cis-mysql-phase1' and 'cis-mongo-phase1'
 ```
 
-3. Connect locally (optional, for debugging):
-- Host: `localhost`
-- Port: `3307`
-- Database: `sd3`
-- User: `sd3user`
-- Password: `sd3pass`
+3. MySQL Connection:
+- Host: `localhost`, Port: `3307`, Database: `sd3`, User: `sd3user`, Password: `sd3pass`
 
-**Note:** The legacy CLI config uses port 3307 → update its XML config if testing locally.
+4. MongoDB Connection:
+- URI: `mongodb://localhost:27017/user_management`
 
 ## Run the Application
 ```bash
@@ -55,26 +68,13 @@ mvn spring-boot:run
 ```
 
 API available at: http://localhost:8080
+Swagger UI: http://localhost:8080/swagger-ui.html
 
 ### Test Coverage Report (JaCoCo)
-
-To ensure high code quality, we use JaCoCo to generate test coverage reports.
-
-1. **Generate the Report**
-   Run the following command in the project root:
-   ```bash
-   mvn clean test
-   ```
-
-2. **Locate the Report**
-   The report is generated in: `target/site/jacoco/index.html`
-
-3. **View the Report**
-   - Open the file `target/site/jacoco/index.html` in your web browser.
-   - Or, double-click the file if you are browsing the directory.
-
-4. **Understanding Coverage**
-   The report shows the percentage of code lines covered by unit tests. A higher percentage indicates that more code paths are being tested, reducing the likelihood of bugs.
+```bash
+mvn clean test
+```
+Report: `target/site/jacoco/index.html`
 
 ## Development Workflow
 - Create feature branches: `feature/#XX-description-initials`

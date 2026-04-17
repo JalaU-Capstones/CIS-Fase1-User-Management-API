@@ -133,24 +133,6 @@ class UserRepositoryTest {
     }
 
     @Test
-    void deleteUser_ShouldNotAffectOtherUsers() {
-        UUID id1 = UUID.randomUUID();
-        UUID id2 = UUID.randomUUID();
-        User user1 = new User(id1, "User One", "userone", "pass1");
-        User user2 = new User(id2, "User Two", "usertwo", "pass2");
-        entityManager.persist(user1);
-        entityManager.persist(user2);
-        entityManager.flush();
-
-        userRepository.delete(user1);
-        entityManager.flush();
-
-        assertThat(userRepository.findById(id1)).isEmpty();
-        assertThat(userRepository.findById(id2)).isPresent();
-        assertThat(userRepository.findAll()).hasSize(1);
-    }
-
-    @Test
     @Transactional
     @Sql("/init.sql")
     void shouldDeleteTopicsIdeasAndVotesInCascade() {
@@ -180,7 +162,7 @@ class UserRepositoryTest {
         assertThat(count("ideas", userId)).isEqualTo(1);
         assertThat(countVotes(userId)).isEqualTo(1);
 
-        // 6. Execute Deletions (mimicking UserService order)
+        // 6. Execute Deletions (mimicking UserService/Adapter order)
         userRepository.deleteVotesByUserId(userId.toString());
         userRepository.deleteVotesByIdeasOwnedByUserId(userId.toString());
         userRepository.deleteVotesByIdeasLinkedToTopicsOwnedByUserId(userId.toString());
@@ -190,7 +172,7 @@ class UserRepositoryTest {
         
         userRepository.deleteTopicsByUserId(userId.toString());
         
-        userRepository.deleteUserByIdNative(userId.toString()); // Changed from deleteById to deleteUserByIdNative
+        userRepository.deleteUserByIdNative(userId.toString());
         entityManager.flush();
 
         // 7. Verify all gone

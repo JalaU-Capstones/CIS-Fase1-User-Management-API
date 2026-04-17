@@ -2,6 +2,20 @@
 
 This document provides instructions on how to run and test the CIS User Management API locally, including interaction with the legacy CLI system.
 
+## Dual Persistence & Versioning
+This API supports dual persistence:
+- **v1 (/api/v1):** Uses MySQL as the primary data store (default).
+- **v2 (/api/v2):** Uses MongoDB as the primary data store.
+
+### Switching Persistence (v1 default)
+The application uses the `db.type` property to choose which repository implementation to use for the default `UserPersistencePort`.
+
+In `application.yml`:
+```yaml
+db:
+  type: mysql   # options: [mysql, mongo]
+```
+
 ## Prerequisites
 
 Before you begin, ensure you have the following installed:
@@ -10,25 +24,23 @@ Before you begin, ensure you have the following installed:
 *   **Maven 3.9 or higher**: [Download and Install Maven](https://maven.apache.org/download.cgi)
 *   **Docker Desktop**: [Download and Install Docker Desktop](https://www.docker.com/products/docker-desktop)
 
-## 1. Set up the Database (MySQL with Docker)
+## 1. Set up the Database (MySQL & MongoDB with Docker)
 
-The API coexists with a legacy system and uses a shared MySQL 8 database.
+The API coexists with a legacy system and uses a shared MySQL 8 database. It also supports MongoDB for v2 endpoints.
 
-1.  **Start MySQL container**:
+1.  **Start containers**:
     From the project root, run:
     ```bash
     docker compose up -d
     ```
-    This will start a MySQL container with:
-    *   **Port**: 3307
-    *   **Database**: sd3
-    *   **User**: sd3user
-    *   **Password**: sd3pass
+    This will start:
+    *   **MySQL**: `localhost:3307`, Database: `sd3`, User: `sd3user`, Password: `sd3pass`
+    *   **MongoDB**: `mongodb://localhost:27017/user_management`
 
 2.  **Verify it's running**:
     ```bash
     docker ps
-    # Look for container 'cis-mysql-phase1'
+    # Look for containers 'cis-mysql-phase1' and 'cis-mongo-phase1'
     ```
 
 ## 2. Create a User via Legacy CLI
@@ -67,7 +79,7 @@ Since the User Management API Phase 1 is designed to work with existing users, y
 ### Access API Documentation (Swagger UI)
 Open [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html) to explore endpoints.
 
-### Example Flow: Login and Delete
+### Example Flow: Login and Delete (v1 - MySQL)
 
 1.  **Log in**:
     Use the credentials created via the CLI:
@@ -88,6 +100,9 @@ Open [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.ht
     *   **Action**: Provide the UUID and execute.
     *   **Warning**: This will also delete all associated topics, ideas, and votes created by this user in the shared database.
     *   **Success Message**: "User and all related topics, ideas, and votes have been successfully deleted."
+
+### Example Flow (v2 - MongoDB)
+Endpoints under `/api/v2/users` will use MongoDB regardless of the `db.type` configuration.
 
 ## 5. Stopping the Environment
 
