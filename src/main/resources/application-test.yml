@@ -17,7 +17,7 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://localhost:27017/user_management_test
+      uri: mongodb://localhost:27017/sd3_test
 
 application-properties:
   jwt:

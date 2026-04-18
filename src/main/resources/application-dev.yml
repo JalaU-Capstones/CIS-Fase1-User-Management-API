@@ -10,7 +10,7 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://localhost:27017/user_management
+      uri: mongodb://localhost:27017/sd3
 
   jpa:
     open-in-view: false
