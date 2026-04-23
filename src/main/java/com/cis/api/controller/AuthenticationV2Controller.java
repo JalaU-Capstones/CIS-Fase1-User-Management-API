@@ -3,7 +3,7 @@ package com.cis.api.controller;
 import com.cis.api.dto.AuthRequest;
 import com.cis.api.dto.AuthResponse;
 import com.cis.api.exception.ErrorResponse;
-import com.cis.api.service.AuthenticationService;
+import com.cis.api.service.MongoAuthenticationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
@@ -19,22 +19,22 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Controller for authentication-related endpoints.
+ * Controller for authentication-related endpoints V2 (MongoDB).
  */
-@Tag(name = "Authentication", description = "Operations related to user authentication and JWT token generation")
+@Tag(name = "Authentication V2", description = "Operations related to user authentication (MongoDB)")
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping("/api/v2/auth")
 @RequiredArgsConstructor
-public class AuthenticationController {
+public class AuthenticationV2Controller {
 
-    private final AuthenticationService authenticationService;
+    private final MongoAuthenticationService authenticationService;
 
     /**
-     * Authenticates a user and returns a JWT token.
+     * Authenticates a user in MongoDB and returns a JWT token.
      * @param request Login credentials
      * @return 200 OK with token or 401 Unauthorized
      */
-    @Operation(summary = "User login", description = "Authenticates a user and returns a JWT token")
+    @Operation(summary = "User login (V2)", description = "Authenticates a user in MongoDB and returns a JWT token")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Login successful, JWT token returned",
                     content = @Content(mediaType = "application/json",

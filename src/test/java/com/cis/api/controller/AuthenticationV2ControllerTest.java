@@ -8,36 +8,42 @@ import com.cis.api.exception.CustomAuthenticationEntryPoint;
 import com.cis.api.repository.MongoPersistencePort;
 import com.cis.api.security.JwtAuthenticationFilter;
 import com.cis.api.security.JwtService;
-import com.cis.api.service.AuthenticationService;
 import com.cis.api.service.CustomUserDetailsService;
+import com.cis.api.service.MongoAuthenticationService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
+import org.springframework.security.authentication.AuthenticationProvider;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.mockito.ArgumentMatchers.any;
 
-@WebMvcTest(AuthenticationController.class)
+@WebMvcTest(AuthenticationV2Controller.class)
 @Import({SecurityConfig.class, ApplicationConfig.class, JwtAuthenticationFilter.class, CustomAuthenticationEntryPoint.class})
 @TestPropertySource(properties = {
         "application-properties.jwt.secret-key=404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970",
         "application-properties.jwt.expiration-time=864000000"
 })
-class AuthenticationControllerTest {
+class AuthenticationV2ControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @MockBean
-    private AuthenticationService authenticationService;
+    private MongoAuthenticationService authenticationService;
 
     @MockBean
     private JwtService jwtService;
@@ -48,28 +54,33 @@ class AuthenticationControllerTest {
     @MockBean
     private MongoPersistencePort mongoPersistencePort;
 
+    @MockBean
+    private AuthenticationProvider authenticationProvider;
+
     @Test
-    void shouldReturnTokenOnValidLogin() throws Exception {
+    void login_ShouldReturn200AndToken() throws Exception {
         AuthRequest request = new AuthRequest("user", "pass");
-        AuthResponse response = AuthResponse.builder().token("token123").build();
+        AuthResponse response = AuthResponse.builder().token("jwt-token").message("Login successful.").build();
 
-        given(authenticationService.authenticate(request)).willReturn(response);
+        given(authenticationService.authenticate(any(AuthRequest.class))).willReturn(response);
 
-        mockMvc.perform(post("/api/v1/auth/login")
+        mockMvc.perform(post("/api/v2/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"login\":\"user\", \"password\":\"pass\"}"))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("token123"));
+                .andExpect(jsonPath("$.token").value("jwt-token"))
+                .andExpect(jsonPath("$.message").value("Login successful."));
     }
 
     @Test
-    void shouldReturn401WhenInvalidCredentials() throws Exception {
+    void login_WithInvalidCredentials_ShouldReturn401() throws Exception {
+        AuthRequest request = new AuthRequest("wrong", "pass");
         given(authenticationService.authenticate(any(AuthRequest.class)))
-                .willThrow(new org.springframework.security.authentication.BadCredentialsException("Invalid credentials"));
+                .willThrow(new BadCredentialsException("Invalid credentials"));
 
-        mockMvc.perform(post("/api/v1/auth/login")
+        mockMvc.perform(post("/api/v2/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"login\":\"wronguser\", \"password\":\"wrongpass\"}"))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isUnauthorized());
     }
 }

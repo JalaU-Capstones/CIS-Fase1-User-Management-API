@@ -1,5 +1,6 @@
 package com.cis.api.config;
 
+import com.cis.api.repository.MongoPersistencePort;
 import com.cis.api.service.CustomUserDetailsService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -23,11 +24,14 @@ class ApplicationConfigTest {
     @Mock
     private CustomUserDetailsService customUserDetailsService;
 
+    @Mock
+    private MongoPersistencePort mongoPersistencePort;
+
     private ApplicationConfig applicationConfig;
 
     @BeforeEach
     void setUp() {
-        applicationConfig = new ApplicationConfig(customUserDetailsService);
+        applicationConfig = new ApplicationConfig(customUserDetailsService, mongoPersistencePort);
     }
 
     @Test
@@ -83,9 +87,6 @@ class ApplicationConfigTest {
         String hash2y = hash2a.replaceFirst("\\$2a\\$", "\\$2y\\$");
 
         assertThat(encoder.matches(password, hash2a)).isTrue();
-        // Since we are delegating to the internal bcrypt instance, 
-        // it should handle these standard prefixes.
-        // We just need to make sure our "if" conditions are covered.
         assertThat(encoder.matches(password, hash2b)).isTrue();
         assertThat(encoder.matches(password, hash2y)).isTrue();
     }

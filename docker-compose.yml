@@ -1,5 +1,5 @@
-# Docker Compose configuration for local MySQL database
-# Matches legacy schema exactly - no changes allowed (R3)
+# Docker Compose configuration for local databases
+# MySQL matches legacy schema exactly - no changes allowed (R3)
 
 services:
   mysql:
@@ -22,5 +22,15 @@ services:
       timeout: 5s
       retries: 5
 
+  mongodb:
+    image: mongo:6.0
+    container_name: cis-mongo-phase1
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
 volumes:
   mysql-data:
+  mongo-data:

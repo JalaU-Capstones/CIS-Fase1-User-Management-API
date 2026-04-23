@@ -1,11 +1,10 @@
 package com.cis.api.service;
 
-import com.cis.api.dto.UserMapper;
 import com.cis.api.dto.UserRequestDto;
 import com.cis.api.dto.UserResponseDto;
 import com.cis.api.exception.ResourceNotFoundException;
 import com.cis.api.model.User;
-import com.cis.api.repository.UserRepository;
+import com.cis.api.repository.UserPersistencePort;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,13 +35,10 @@ import static org.mockito.Mockito.never;
 class UserServiceTest {
 
     @Mock
-    private UserRepository userRepository;
+    private UserPersistencePort userPersistencePort;
 
     @Mock
     private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private UserMapper userMapper;
 
     @InjectMocks
     private UserService userService;
@@ -70,21 +66,19 @@ class UserServiceTest {
     @Test
     void shouldReturnListOfUsersAsDtos() {
         User user = new User(UUID.randomUUID(), "Test User", "test", "pass");
-        UserResponseDto userResponseDto = new UserResponseDto(user.getId(), user.getName(), user.getLogin());
-        given(userRepository.findAll()).willReturn(List.of(user));
-        given(userMapper.toDto(user)).willReturn(userResponseDto);
+        given(userPersistencePort.findAll()).willReturn(List.of(user));
 
         List<UserResponseDto> result = userService.getAllUsers();
 
         assertThat(result).hasSize(1);
         assertThat(result.get(0).login()).isEqualTo("test");
         assertThat(result.get(0).id()).isEqualTo(user.getId());
-        then(userRepository).should().findAll();
+        then(userPersistencePort).should().findAll();
     }
 
     @Test
     void shouldReturnEmptyListWhenNoUsers() {
-        given(userRepository.findAll()).willReturn(Collections.emptyList());
+        given(userPersistencePort.findAll()).willReturn(Collections.emptyList());
 
         List<UserResponseDto> result = userService.getAllUsers();
 
@@ -95,9 +89,7 @@ class UserServiceTest {
     void shouldGetUserById() {
         UUID id = UUID.randomUUID();
         User user = new User(id, "Test", "test", "pass");
-        UserResponseDto userResponseDto = new UserResponseDto(user.getId(), user.getName(), user.getLogin());
-        given(userRepository.findById(id)).willReturn(Optional.of(user));
-        given(userMapper.toDto(user)).willReturn(userResponseDto);
+        given(userPersistencePort.findById(id)).willReturn(Optional.of(user));
         
         UserResponseDto result = userService.getUserById(id.toString());
         
@@ -108,12 +100,10 @@ class UserServiceTest {
     void shouldCreateUser() {
         UserRequestDto request = new UserRequestDto("Name", "login", "pass");
         User savedUser = new User(UUID.randomUUID(), "Name", "login", "encodedPass");
-        UserResponseDto userResponseDto = new UserResponseDto(savedUser.getId(), savedUser.getName(), savedUser.getLogin());
         
-        given(userRepository.existsByLogin("login")).willReturn(false);
+        given(userPersistencePort.existsByLogin("login")).willReturn(false);
         given(passwordEncoder.encode("pass")).willReturn("encodedPass");
-        given(userRepository.save(any(User.class))).willReturn(savedUser);
-        given(userMapper.toDto(savedUser)).willReturn(userResponseDto);
+        given(userPersistencePort.save(any(User.class))).willReturn(savedUser);
         
         UserResponseDto response = userService.createUser(request);
         
@@ -124,7 +114,7 @@ class UserServiceTest {
     @Test
     void shouldThrowWhenCreatingDuplicateLogin() {
         UserRequestDto request = new UserRequestDto("Name", "login", "pass");
-        given(userRepository.existsByLogin("login")).willReturn(true);
+        given(userPersistencePort.existsByLogin("login")).willReturn(true);
         
         assertThatThrownBy(() -> userService.createUser(request))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -138,13 +128,11 @@ class UserServiceTest {
         UserRequestDto request = new UserRequestDto("New Name", login, "newpass");
         User existingUser = new User(id, "Old Name", login, "pass");
         User updatedUser = new User(id, "New Name", login, "encodedNewPass");
-        UserResponseDto userResponseDto = new UserResponseDto(updatedUser.getId(), updatedUser.getName(), updatedUser.getLogin());
 
         mockAuthentication(login);
-        given(userRepository.findById(id)).willReturn(Optional.of(existingUser));
+        given(userPersistencePort.findById(id)).willReturn(Optional.of(existingUser));
         given(passwordEncoder.encode("newpass")).willReturn("encodedNewPass");
-        given(userRepository.save(existingUser)).willReturn(updatedUser);
-        given(userMapper.toDto(updatedUser)).willReturn(userResponseDto);
+        given(userPersistencePort.save(existingUser)).willReturn(updatedUser);
 
         UserResponseDto response = userService.updateUser(id.toString(), request);
         
@@ -158,12 +146,10 @@ class UserServiceTest {
         UserRequestDto request = new UserRequestDto("New Name", login, "");
         User existingUser = new User(id, "Old Name", login, "pass");
         User updatedUser = new User(id, "New Name", login, "pass");
-        UserResponseDto userResponseDto = new UserResponseDto(updatedUser.getId(), updatedUser.getName(), updatedUser.getLogin());
 
         mockAuthentication(login);
-        given(userRepository.findById(id)).willReturn(Optional.of(existingUser));
-        given(userRepository.save(existingUser)).willReturn(updatedUser);
-        given(userMapper.toDto(updatedUser)).willReturn(userResponseDto);
+        given(userPersistencePort.findById(id)).willReturn(Optional.of(existingUser));
+        given(userPersistencePort.save(existingUser)).willReturn(updatedUser);
 
         UserResponseDto response = userService.updateUser(id.toString(), request);
         
@@ -179,8 +165,8 @@ class UserServiceTest {
         User existingUser = new User(id, "Old Name", login, "pass");
 
         mockAuthentication(login);
-        given(userRepository.findById(id)).willReturn(Optional.of(existingUser));
-        given(userRepository.existsByLoginAndIdNot("newlogin", id)).willReturn(true);
+        given(userPersistencePort.findById(id)).willReturn(Optional.of(existingUser));
+        given(userPersistencePort.existsByLoginAndIdNot("newlogin", id)).willReturn(true);
 
         assertThatThrownBy(() -> userService.updateUser(id.toString(), request))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -194,7 +180,7 @@ class UserServiceTest {
         User existingUser = new User(id, "Old Name", "other", "pass");
 
         mockAuthentication("not-owner");
-        given(userRepository.findById(id)).willReturn(Optional.of(existingUser));
+        given(userPersistencePort.findById(id)).willReturn(Optional.of(existingUser));
 
         assertThatThrownBy(() -> userService.updateUser(id.toString(), request))
                 .isInstanceOf(AccessDeniedException.class)
@@ -209,17 +195,11 @@ class UserServiceTest {
         User user = new User(id, "Test", login, "pass");
         
         mockAuthentication(login);
-        given(userRepository.findById(id)).willReturn(Optional.of(user));
+        given(userPersistencePort.findById(id)).willReturn(Optional.of(user));
         
         userService.deleteUser(idStr);
         
-        then(userRepository).should().deleteVotesByIdeasLinkedToTopicsOwnedByUserId(idStr);
-        then(userRepository).should().deleteVotesByIdeasOwnedByUserId(idStr);
-        then(userRepository).should().deleteVotesByUserId(idStr);
-        then(userRepository).should().deleteIdeasLinkedToTopicsOwnedByUserId(idStr);
-        then(userRepository).should().deleteIdeasByUserId(idStr);
-        then(userRepository).should().deleteTopicsByUserId(idStr);
-        then(userRepository).should().deleteUserByIdNative(idStr);
+        then(userPersistencePort).should().deleteUserAndRelatedData(id);
     }
 
     @Test
@@ -228,7 +208,7 @@ class UserServiceTest {
         User user = new User(id, "Test", "other", "pass");
 
         mockAuthentication("not-owner");
-        given(userRepository.findById(id)).willReturn(Optional.of(user));
+        given(userPersistencePort.findById(id)).willReturn(Optional.of(user));
 
         assertThatThrownBy(() -> userService.deleteUser(id.toString()))
                 .isInstanceOf(AccessDeniedException.class)
@@ -238,12 +218,12 @@ class UserServiceTest {
     @Test
     void shouldThrowWhenDeletingNonExistentUser() {
         UUID id = UUID.randomUUID();
-        given(userRepository.findById(id)).willReturn(Optional.empty());
+        given(userPersistencePort.findById(id)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> userService.deleteUser(id.toString()))
                 .isInstanceOf(ResourceNotFoundException.class)
                 .hasMessageContaining("User not found");
         
-        then(userRepository).should(never()).deleteUserByIdNative(any());
+        then(userPersistencePort).should(never()).deleteUserAndRelatedData(any());
     }
 }

@@ -27,6 +27,7 @@ public class SecurityConfig {
 
     private static final String[] PUBLIC_ENDPOINTS = {
             "/api/v1/auth/login",
+            "/api/v2/auth/login",
             "/v3/api-docs/**",
             "/swagger-ui/**",
             "/swagger-ui.html"
@@ -35,7 +36,7 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        log.info("Configuring security: GET /api/v1/users/** is PUBLIC");
+        log.info("Configuring security: GET /api/v1/users/** and /api/v2/users/** are PUBLIC");
 
         return http
                 .csrf(AbstractHttpConfigurer::disable)
@@ -43,6 +44,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(PUBLIC_ENDPOINTS).permitAll();
                     auth.requestMatchers(HttpMethod.GET, "/api/v1/users/**").permitAll();
+                    auth.requestMatchers(HttpMethod.GET, "/api/v2/users/**").permitAll();
                     auth.anyRequest().authenticated();
                 })
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))

@@ -3,7 +3,7 @@ package com.cis.api.controller;
 import com.cis.api.dto.UserRequestDto;
 import com.cis.api.dto.UserResponseDto;
 import com.cis.api.exception.ErrorResponse;
-import com.cis.api.service.UserService;
+import com.cis.api.service.MongoUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -20,22 +20,25 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "Users", description = "Operations related to user management")
+/**
+ * Controller for user management V2 (MongoDB).
+ */
+@Tag(name = "Users V2", description = "Operations related to user management using MongoDB")
 @RestController
-@RequestMapping("/api/v1/users")
+@RequestMapping("/api/v2/users")
 @RequiredArgsConstructor
-public class UserController {
+public class UserV2Controller {
 
-    private final UserService userService;
+    private final MongoUserService userService;
 
-    @Operation(summary = "Get all users", description = "This method brings all users from the database.")
+    @Operation(summary = "Get all users (V2)", description = "This method brings all users from the MongoDB database.")
     @ApiResponse(responseCode = "200", description = "Users retrieved successfully, returns empty list if none exist")
     @GetMapping
     public ResponseEntity<List<UserResponseDto>> getAllUsers() {
         return ResponseEntity.ok(userService.getAllUsers());
     }
 
-    @Operation(summary = "Get user by Id", description = "This method retrieves a specific user by their ID.")
+    @Operation(summary = "Get user by Id (V2)", description = "This method retrieves a specific user by their ID from MongoDB.")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "User found successfully",
                     content = @Content(mediaType = "application/json",
@@ -52,7 +55,7 @@ public class UserController {
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
-    @Operation(summary = "Create a user", description = "Create a new user in the database")
+    @Operation(summary = "Create a user (V2)", description = "Create a new user in the MongoDB database")
     @ApiResponses({
             @ApiResponse(responseCode = "201", description = "User created successfully",
                     content = @Content(mediaType = "application/json",
@@ -68,7 +71,7 @@ public class UserController {
         return new ResponseEntity<>(userService.createUser(request), HttpStatus.CREATED);
     }
 
-    @Operation(summary = "Update a user", description = "This method updates the name, username, and/or password of an existing user")
+    @Operation(summary = "Update a user (V2)", description = "This method updates a user in MongoDB")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "User updated successfully",
                     content = @Content(mediaType = "application/json",
@@ -91,12 +94,12 @@ public class UserController {
         return ResponseEntity.ok(userService.updateUser(id, request));
     }
 
-    @Operation(summary = "Delete a user", description = "This method deletes an existing user by their Id.")
+    @Operation(summary = "Delete a user (V2)", description = "This method deletes a user from MongoDB")
     @ApiResponses({
-            @ApiResponse(responseCode = "200", description = "User successfully deleted.",
+            @ApiResponse(responseCode = "200", description = "User has been successfully deleted.",
                     content = @Content(mediaType = "text/plain",
                             schema = @Schema(implementation = String.class),
-                            examples = @ExampleObject(value = "User and all related topics, ideas, and votes have been successfully deleted."))),
+                            examples = @ExampleObject(value = "User has been successfully deleted from MongoDB."))),
             @ApiResponse(responseCode = "404", description = "User not found",
                     content = @Content(mediaType = "application/json",
                             schema = @Schema(implementation = ErrorResponse.class),
@@ -110,6 +113,6 @@ public class UserController {
     public ResponseEntity<String> deleteUser(@Parameter(description = "UUID of the user", example = "550e8400-e29b-41d4-a716-446655440000")
             @PathVariable String id) {
         userService.deleteUser(id);
-        return ResponseEntity.ok("User and all related topics, ideas, and votes have been successfully deleted.");
+        return ResponseEntity.ok("User has been successfully deleted from MongoDB.");
     }
 }

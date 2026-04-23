@@ -1,7 +1,7 @@
 package com.cis.api.service;
 
 import com.cis.api.model.User;
-import com.cis.api.repository.UserRepository;
+import com.cis.api.repository.UserPersistencePort;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -21,7 +21,7 @@ import static org.mockito.BDDMockito.given;
 class CustomUserDetailsServiceTest {
 
     @Mock
-    private UserRepository userRepository;
+    private UserPersistencePort userPersistencePort;
 
     @InjectMocks
     private CustomUserDetailsService userDetailsService;
@@ -29,7 +29,7 @@ class CustomUserDetailsServiceTest {
     @Test
     void loadUserByUsername_WhenUserExists_ShouldReturnUserDetails() {
         User user = new User(UUID.randomUUID(), "Test User", "testuser", "password");
-        given(userRepository.findByLogin("testuser")).willReturn(Optional.of(user));
+        given(userPersistencePort.findByLogin("testuser")).willReturn(Optional.of(user));
 
         UserDetails userDetails = userDetailsService.loadUserByUsername("testuser");
 
@@ -40,7 +40,7 @@ class CustomUserDetailsServiceTest {
 
     @Test
     void loadUserByUsername_WhenUserDoesNotExist_ShouldThrowException() {
-        given(userRepository.findByLogin("nonexistent")).willReturn(Optional.empty());
+        given(userPersistencePort.findByLogin("nonexistent")).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> userDetailsService.loadUserByUsername("nonexistent"))
                 .isInstanceOf(UsernameNotFoundException.class)
