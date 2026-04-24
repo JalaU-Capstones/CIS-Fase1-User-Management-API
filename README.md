@@ -76,6 +76,9 @@ mvn clean test
 ```
 Report: `target/site/jacoco/index.html`
 
+## Integration Testing
+The project includes a complete Postman integration test suite for both API versions: `v1` on MySQL and `v2` on MongoDB. See [docs/test/README.md](/home/zeus/Jala/Desarrollo%20de%20Software%203/Capstone/Phase1/CIS-Fase1-User-Management-API/docs/test/README.md) for setup, unified `{{api_version}}` execution, and the ready-to-use Postman scripts.
+
 ## Development Workflow
 - Create feature branches: `feature/#XX-description-initials`
 - Commit small & descriptive
