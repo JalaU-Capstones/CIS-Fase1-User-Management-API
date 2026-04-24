@@ -11,8 +11,7 @@ Integrity tests verify that data returned by the API matches the inputs that cre
 - `POST /api/{version}/auth/login`
 - `DELETE /api/{version}/users/{id}`
 - `GET /api/{version}/users/{id}`
-- `GET /api/v1/users`
-- `GET /api/v2/users`
+- `GET /api/{version}/users`
 
 ## Postman Setup
 
@@ -30,8 +29,7 @@ The scripts will populate:
 - `new_user_password`
 - `updated_user_login`
 - `updated_user_password`
-- `v1_seed_user_id`
-- `v2_seed_user_id`
+- `existing_user_id`
 
 ## Integrity Checks Performed
 
@@ -60,15 +58,15 @@ The scripts will populate:
 
 ### Public GET by ID
 
-- `GET /api/v1/users` stores the ID belonging to `seed_login` in `v1_seed_user_id`
-- `GET /api/v2/users` stores the ID belonging to `seed_login` in `v2_seed_user_id`
+- `GET /api/{{api_version}}/users` can resolve a valid existing ID for the active version
+- the request-level pre-request script for `GET /api/{{api_version}}/users/{{existing_user_id}}` stores `existing_user_id`
 
 ## How To Run
 
 1. Run the 7-step e2e folder.
 2. Repeat it with the other `api_version`.
-3. Run public GET for `v1`.
-4. Run public GET for `v2`.
+3. Run the unified public GET requests.
+4. Repeat with the other version.
 
 ## Expected Results
 
@@ -84,4 +82,4 @@ The scripts will populate:
 - If step 5 fails after a successful update:
   - confirm step 4 stored `updated_user_login` and `updated_user_password`
 - If public GET by ID fails with an empty URL placeholder:
-  - run the matching `get all users` request first
+  - run the unified `get all users` request first or use the documented pre-request script

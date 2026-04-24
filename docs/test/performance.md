@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Performance tests in this documentation are lightweight integration checks intended to catch obvious latency regressions during local verification and CI-style collection runs.
+Performance tests in this documentation are lightweight integration checks intended to catch obvious latency regressions during local verification and collection runs.
 
 ## Covered Endpoints
 
 - all scripted auth endpoints
 - all scripted CRUD endpoints
-- all scripted public GET endpoints
+- the unified public GET endpoints
 
 ## Performance Threshold
 
@@ -23,11 +23,13 @@ This threshold is intentionally strict for a local developer environment and sho
 1. Start Docker containers and the Spring Boot API locally.
 2. Avoid running heavy background tasks during the measurement.
 3. Run the collection from Postman Runner or Newman.
+4. Repeat with `api_version=v1` and `api_version=v2`.
 
 ## Expected Results
 
 - all requests remain under `500 ms`
 - repeated runs stay stable for both `v1` and `v2`
+- the same unified public GET scripts stay under threshold when `api_version` changes
 
 ## Troubleshooting
 

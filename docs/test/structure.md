@@ -33,10 +33,8 @@ docs/
         ├── 05_login_updated_test.js
         ├── 06_delete_user_test.js
         ├── 07_verify_deletion_test.js
-        ├── v1_get_all_users_test.js
-        ├── v1_get_user_by_id_test.js
-        ├── v2_get_all_users_test.js
-        └── v2_get_user_by_id_test.js
+        ├── get_all_users_test.js
+        └── get_user_by_id_test.js
 ```
 
 ## Postman Collection Layout
@@ -53,12 +51,7 @@ Run with `api_version=v1`, then rerun with `api_version=v2`.
 6. `06 Delete User`
 7. `07 Verify Deletion`
 
-## Folder `Public GET - v1`
-
-1. `Get All Users`
-2. `Get User By ID`
-
-## Folder `Public GET - v2`
+## Folder `Public GET`
 
 1. `Get All Users`
 2. `Get User By ID`
@@ -79,6 +72,10 @@ seed_login + seed_password
   -> updated_token
   -> 06 delete user
   -> 07 verify deletion
+
+GET /api/{{api_version}}/users
+  -> existing_user_id
+  -> GET /api/{{api_version}}/users/{{existing_user_id}}
 ```
 
 ## Setup Instructions
@@ -86,12 +83,14 @@ seed_login + seed_password
 1. Create the environment variables defined in `README.md`.
 2. Create the request folders above.
 3. For each request, paste the script file with the matching name.
-4. Use collection variables, not environment variables, for transient data generated during the run.
+4. Add the documented request-level pre-request script to `Get User By ID`.
+5. Use collection variables, not environment variables, for transient data generated during the run.
 
 ## Expected Results
 
 - The e2e folder is self-contained.
-- The public GET folders are independent except that each by-ID request expects the matching `get all` request to populate the seed ID.
+- The public GET request pair is reusable for both versions through `{{api_version}}`.
+- The by-ID request expects `existing_user_id` to be populated by its request-level pre-request script or by the unified `get all users` request.
 
 ## Troubleshooting
 

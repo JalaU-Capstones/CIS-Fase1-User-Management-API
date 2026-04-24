@@ -8,12 +8,11 @@ Functionality tests validate the user lifecycle and the business rules enforced 
 
 - `POST /api/v1/auth/login`
 - `POST /api/v2/auth/login`
-- `POST /api/v1/users`
-- `POST /api/v2/users`
-- `PUT /api/v1/users/{id}`
-- `PUT /api/v2/users/{id}`
-- `DELETE /api/v1/users/{id}`
-- `DELETE /api/v2/users/{id}`
+- `POST /api/{{api_version}}/users`
+- `PUT /api/{{api_version}}/users/{id}`
+- `DELETE /api/{{api_version}}/users/{id}`
+- `GET /api/{{api_version}}/users`
+- `GET /api/{{api_version}}/users/{id}`
 
 ## Business Rules Verified
 
@@ -29,7 +28,9 @@ Functionality tests validate the user lifecycle and the business rules enforced 
 1. Complete the environment setup from `README.md`.
 2. Ensure the seed credentials exist in both MySQL and MongoDB.
 3. Import the scripts from `postman-scripts/`.
-4. Run the e2e folder for `v1`, then for `v2`.
+4. Set `api_version=v1` or `api_version=v2` before running.
+5. Run the e2e folder.
+6. Run the unified public GET requests.
 
 ## Expected Results
 

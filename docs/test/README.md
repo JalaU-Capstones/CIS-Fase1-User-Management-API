@@ -1,20 +1,18 @@
 # CIS User Management API Postman Integration Tests
 
-This directory documents a complete Postman-based integration test suite for the CIS User Management API Phase 1. The suite covers both persistence versions:
+This directory documents a complete Postman-based integration test suite for the CIS User Management API Phase 1. The suite covers both persistence versions through the same requests and scripts by using the collection variable `{{api_version}}`.
 
-- `v1` -> `POST /api/v1/auth/login`, `GET|POST|PUT|DELETE /api/v1/users/**` backed by MySQL
-- `v2` -> `POST /api/v2/auth/login`, `GET|POST|PUT|DELETE /api/v2/users/**` backed by MongoDB
+- `v1` -> MySQL-backed endpoints under `/api/v1`
+- `v2` -> MongoDB-backed endpoints under `/api/v2`
 
-The automated flow is designed so Postman manages tokens, IDs, and credentials through collection variables. No manual copy/paste is required once the collection and environment are configured.
+The automated flow is designed so Postman manages tokens, IDs, and credentials through collection variables. No manual token or ID copy/paste is required once the collection and environment are configured.
 
 ## What Is Included
 
 - A reusable 7-step end-to-end flow driven by `{{api_version}}`
-- Public GET validation scripts for:
-  - `GET /api/v1/users`
-  - `GET /api/v1/users/{{v1_seed_user_id}}`
-  - `GET /api/v2/users`
-  - `GET /api/v2/users/{{v2_seed_user_id}}`
+- Unified public GET validation scripts for:
+  - `GET /api/{{api_version}}/users`
+  - `GET /api/{{api_version}}/users/{{existing_user_id}}`
 - Test guidance organized by:
   - connectivity
   - structure
@@ -41,10 +39,7 @@ The automated flow is designed so Postman manages tokens, IDs, and credentials t
 
 1. Start the databases and API as documented in [running-and-testing-the-api.md](/home/zeus/Jala/Desarrollo%20de%20Software%203/Capstone/Phase1/CIS-Fase1-User-Management-API/docs/onboarding/running-and-testing-the-api.md).
 2. Create the seed user in MySQL with the legacy CLI.
-3. Bootstrap the same seed user in MongoDB once. The simplest approach is:
-   - log in through `/api/v1/auth/login` with the CLI-created user
-   - call `POST /api/v2/users` with that token
-   - create the same `login` and `password` you want to use as the shared seed for v2
+3. Bootstrap the same seed credentials in MongoDB once so `api_version=v2` can authenticate from step 1.
 
 The same `seed_login` and `seed_password` values can then be reused for both versions.
 
@@ -57,7 +52,7 @@ Create one environment named `CIS API Local` with these initial/current values:
 | `base_url` | `http://localhost:8080` | Yes | API root |
 | `seed_login` | `jroca` | Yes | Must exist in MySQL and MongoDB |
 | `seed_password` | `pass123` | Yes | Must match the shared seed user |
-| `api_version` | `v1` | Yes | Run the e2e flow once with `v1` and once with `v2` |
+| `api_version` | `v1` | Yes | Set to `v1` or `v2` before running |
 | `seed_token` | empty | No | Populated by step 1 |
 | `new_user_id` | empty | No | Populated by step 2 |
 | `new_user_name` | empty | No | Populated by step 2 |
@@ -68,8 +63,7 @@ Create one environment named `CIS API Local` with these initial/current values:
 | `updated_user_login` | empty | No | Populated by step 4 |
 | `updated_user_password` | empty | No | Populated by step 4 |
 | `updated_token` | empty | No | Populated by step 5 |
-| `v1_seed_user_id` | empty | No | Populated by `v1_get_all_users_test.js` |
-| `v2_seed_user_id` | empty | No | Populated by `v2_get_all_users_test.js` |
+| `existing_user_id` | empty | No | Used by the unified GET-by-ID request |
 
 ## Collection Structure
 
@@ -77,96 +71,53 @@ Use one collection named `CIS User Management API - Integration Tests` with thes
 
 ### Folder `E2E Flow`
 
-Run this folder twice: first with `api_version=v1`, then with `api_version=v2`.
+Set `api_version=v1` or `api_version=v2`, then run the same folder.
 
 1. `01 Seed Login`
    - `POST {{base_url}}/api/{{api_version}}/auth/login`
-   - Body:
-     ```json
-     {
-       "login": "{{seed_login}}",
-       "password": "{{seed_password}}"
-     }
-     ```
 2. `02 Create User`
    - `POST {{base_url}}/api/{{api_version}}/users`
-   - Authorization: `Bearer Token` -> `{{seed_token}}`
-   - Body:
-     ```json
-     {
-       "name": "{{new_user_name}}",
-       "login": "{{new_user_login}}",
-       "password": "{{new_user_password}}"
-     }
-     ```
+   - Authorization: `Bearer {{seed_token}}`
 3. `03 Login New User`
    - `POST {{base_url}}/api/{{api_version}}/auth/login`
-   - Body:
-     ```json
-     {
-       "login": "{{new_user_login}}",
-       "password": "{{new_user_password}}"
-     }
-     ```
 4. `04 Update User`
    - `PUT {{base_url}}/api/{{api_version}}/users/{{new_user_id}}`
-   - Authorization: `Bearer Token` -> `{{new_user_token}}`
-   - Body:
-     ```json
-     {
-       "name": "{{updated_user_name}}",
-       "login": "{{updated_user_login}}",
-       "password": "{{updated_user_password}}"
-     }
-     ```
+   - Authorization: `Bearer {{new_user_token}}`
 5. `05 Login Updated User`
    - `POST {{base_url}}/api/{{api_version}}/auth/login`
-   - Body:
-     ```json
-     {
-       "login": "{{updated_user_login}}",
-       "password": "{{updated_user_password}}"
-     }
-     ```
 6. `06 Delete User`
    - `DELETE {{base_url}}/api/{{api_version}}/users/{{new_user_id}}`
-   - Authorization: `Bearer Token` -> `{{updated_token}}`
+   - Authorization: `Bearer {{updated_token}}`
 7. `07 Verify Deletion`
    - `GET {{base_url}}/api/{{api_version}}/users/{{new_user_id}}`
 
-### Folder `Public GET - v1`
+### Folder `Public GET`
 
-1. `GET {{base_url}}/api/v1/users`
-2. `GET {{base_url}}/api/v1/users/{{v1_seed_user_id}}`
+Set `api_version` to the target version, then run:
 
-Run the collection item 1 before 2 so the seed ID is auto-detected from `seed_login`.
+1. `GET {{base_url}}/api/{{api_version}}/users`
+2. `GET {{base_url}}/api/{{api_version}}/users/{{existing_user_id}}`
 
-### Folder `Public GET - v2`
-
-1. `GET {{base_url}}/api/v2/users`
-2. `GET {{base_url}}/api/v2/users/{{v2_seed_user_id}}`
-
-Run the collection item 1 before 2 so the seed ID is auto-detected from `seed_login`.
-
-## Importing the Scripts
+## Importing The Scripts
 
 For each request:
 
 1. Open the request in Postman.
-2. Paste the matching file from [postman-scripts/README.md](/home/zeus/Jala/Desarrollo%20de%20Software%203/Capstone/Phase1/CIS-Fase1-User-Management-API/docs/test/postman-scripts/README.md) into the `Pre-request Script` tab when a `_pre.js` file exists.
-3. Paste the matching file into the `Tests` tab.
-4. Save the request.
+2. Paste the matching file from [postman-scripts/README.md](/home/zeus/Jala/Desarrollo%20de%20Software%203/Capstone/Phase1/CIS-Fase1-User-Management-API/docs/test/postman-scripts/README.md).
+3. Save the request.
 
-## Running the Full Collection
+For `GET {{base_url}}/api/{{api_version}}/users/{{existing_user_id}}`, also add the documented request-level pre-request script from `postman-scripts/README.md` so Postman resolves a valid ID automatically.
+
+## Running The Full Collection
 
 ### Postman Collection Runner
 
 1. Select the collection.
 2. Select environment `CIS API Local`.
-3. Run the `E2E Flow` folder with `api_version=v1`.
-4. Change `api_version` to `v2`.
-5. Run the `E2E Flow` folder again.
-6. Run the public GET folders.
+3. Set `api_version=v1`.
+4. Run the `E2E Flow` folder and the `Public GET` folder.
+5. Set `api_version=v2`.
+6. Run the same folders again.
 
 Expected outcome:
 
@@ -174,7 +125,8 @@ Expected outcome:
 - Step 2 returns `201`
 - Steps 4 and 6 return `200`
 - Step 7 returns `404`
-- Public GET requests return `200`, unless the requested ID does not exist, in which case they must return `404`
+- `GET /api/{{api_version}}/users` returns `200`
+- `GET /api/{{api_version}}/users/{{existing_user_id}}` returns `200` for an existing user, or `404` when you intentionally point it to a missing ID
 - Every scripted request validates response time `< 500 ms`
 
 ### Newman
@@ -192,6 +144,28 @@ newman run CIS_User_Management_API_Integration.postman_collection.json \
 
 Run the same command again with `--env-var api_version=v2`.
 
+## Running Tests For Both API Versions
+
+### Option 1: Change `api_version` and rerun
+
+1. Set `api_version=v1` in the environment.
+2. Run the collection.
+3. Set `api_version=v2`.
+4. Run the same collection again.
+
+### Option 2: Use Collection Runner with iteration data
+
+Create a JSON data file such as:
+
+```json
+[
+  { "api_version": "v1" },
+  { "api_version": "v2" }
+]
+```
+
+Run the same collection in Postman Collection Runner with that file. The unified requests and scripts will use the iteration value of `api_version` for each pass.
+
 ## Troubleshooting
 
 - `401 Unauthorized` on step 1:
@@ -205,7 +179,8 @@ Run the same command again with `--env-var api_version=v2`.
   - logins must stay at or below 20 characters
   - passwords must be between 6 and 100 characters
 - `404 Not Found` on public GET by ID:
-  - run the corresponding `get all` request first so the seed ID variable is populated
+  - verify the request-level pre-request script populated `existing_user_id`
+  - run `GET /api/{{api_version}}/users` first if needed
 
 ## Reference Files
 

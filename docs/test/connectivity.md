@@ -8,16 +8,11 @@ Connectivity tests verify that each endpoint is reachable, uses the correct HTTP
 
 - `POST /api/v1/auth/login`
 - `POST /api/v2/auth/login`
-- `GET /api/v1/users`
-- `GET /api/v1/users/{id}`
-- `POST /api/v1/users`
-- `PUT /api/v1/users/{id}`
-- `DELETE /api/v1/users/{id}`
-- `GET /api/v2/users`
-- `GET /api/v2/users/{id}`
-- `POST /api/v2/users`
-- `PUT /api/v2/users/{id}`
-- `DELETE /api/v2/users/{id}`
+- `GET /api/{{api_version}}/users`
+- `GET /api/{{api_version}}/users/{id}`
+- `POST /api/{{api_version}}/users`
+- `PUT /api/{{api_version}}/users/{id}`
+- `DELETE /api/{{api_version}}/users/{id}`
 
 ## Postman Setup
 
@@ -31,9 +26,11 @@ Use the environment variables from [README.md](/home/zeus/Jala/Desarrollo%20de%2
 ## How To Run
 
 1. Configure the request URLs exactly as documented in `README.md`.
-2. Paste the matching `*_test.js` file into each request.
-3. Run the 7-step e2e folder in order.
-4. Run the public GET folders.
+2. Paste the matching scripts into each request.
+3. Set `api_version` to the target version.
+4. Run the 7-step e2e folder in order.
+5. Run the unified public GET requests.
+6. Repeat with the other `api_version`.
 
 ## Expected Results
 

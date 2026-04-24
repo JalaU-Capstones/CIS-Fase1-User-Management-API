@@ -2,14 +2,11 @@
 
 ## Scope
 
-This delivery adds complete test documentation under `docs/test/` for the CIS User Management API Phase 1 and includes copy-paste-ready Postman scripts for:
-
-- the 7-step automated e2e lifecycle
-- public GET coverage for v1 and v2
+This delivery refactors the Postman integration documentation and scripts so both API versions use the same GET coverage through `{{api_version}}`.
 
 ## Deliverables
 
-- `README.md` with full setup, collection structure, Postman Runner steps, and Newman command
+- `README.md` with unified setup, collection structure, Postman Runner steps, and Newman command
 - `QUICK_REFERENCE.md` for fast execution
 - category documents:
   - `connectivity.md`
@@ -17,8 +14,7 @@ This delivery adds complete test documentation under `docs/test/` for the CIS Us
   - `integrity.md`
   - `functionality.md`
   - `performance.md`
-- `structure.md` with the exact documentation tree and request organization
-- `postman-scripts/README.md` plus all required JavaScript files
+- `postman-scripts/README.md` plus the unified JavaScript file set
 
 ## Automated Flow Coverage
 
@@ -36,12 +32,10 @@ All flow state is stored with `pm.collectionVariables.set(...)`.
 
 ## Public GET Coverage
 
-- `GET /api/v1/users`
-- `GET /api/v1/users/{id}`
-- `GET /api/v2/users`
-- `GET /api/v2/users/{id}`
+- `GET /api/{{api_version}}/users`
+- `GET /api/{{api_version}}/users/{id}`
 
-The `get all` scripts automatically capture `v1_seed_user_id` and `v2_seed_user_id` from the configured `seed_login` so the by-ID requests can stay automated.
+The unified scripts use `api_version` and `existing_user_id`, and the documented request-level pre-request script resolves an existing ID without hardcoding.
 
 ## Assertions Included
 
@@ -63,4 +57,4 @@ The `get all` scripts automatically capture `v1_seed_user_id` and `v2_seed_user_
 
 ## Known Operational Requirement
 
-The shared seed credentials must exist in both data stores if you want to run the same e2e flow against both versions. The onboarding guide covers the MySQL seed creation. This documentation adds the missing Mongo bootstrap guidance so `api_version=v2` can authenticate from step 1.
+The shared seed credentials must exist in both data stores if you want to run the same e2e flow against both versions. The onboarding guide covers the MySQL seed creation. This documentation keeps that requirement explicit and adds the unified execution model around `api_version`.

@@ -6,7 +6,8 @@ pm.test("Delete user responds in under 500 ms", function () {
     pm.expect(pm.response.responseTime).to.be.below(500);
 });
 
-const version = pm.collectionVariables.get("active_api_version") || pm.variables.get("api_version");
+const version = pm.collectionVariables.get("api_version") || pm.environment.get("api_version") || "v1";
+pm.collectionVariables.set("api_version", version);
 const responseText = pm.response.text();
 const expectedMessage = version === "v2"
     ? "User has been successfully deleted from MongoDB."

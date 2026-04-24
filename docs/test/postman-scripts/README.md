@@ -13,10 +13,8 @@ This directory contains the exact JavaScript to paste into Postman request tabs.
 | `05 Login Updated User` | `05_login_updated_pre.js` | `05_login_updated_test.js` |
 | `06 Delete User` | none | `06_delete_user_test.js` |
 | `07 Verify Deletion` | none | `07_verify_deletion_test.js` |
-| `GET /api/v1/users` | none | `v1_get_all_users_test.js` |
-| `GET /api/v1/users/{{v1_seed_user_id}}` | none | `v1_get_user_by_id_test.js` |
-| `GET /api/v2/users` | none | `v2_get_all_users_test.js` |
-| `GET /api/v2/users/{{v2_seed_user_id}}` | none | `v2_get_user_by_id_test.js` |
+| `GET /api/{{api_version}}/users` | none | `get_all_users_test.js` |
+| `GET /api/{{api_version}}/users/{{existing_user_id}}` | request-level snippet in this README | `get_user_by_id_test.js` |
 
 ## Request Bodies
 
@@ -73,15 +71,46 @@ This directory contains the exact JavaScript to paste into Postman request tabs.
 - `04 Update User` -> `Bearer {{new_user_token}}`
 - `06 Delete User` -> `Bearer {{updated_token}}`
 
+## Unified GET By ID Pre-request Script
+
+Paste this into the `Pre-request Script` tab of `GET {{base_url}}/api/{{api_version}}/users/{{existing_user_id}}`:
+
+```javascript
+const apiVersion = pm.collectionVariables.get("api_version") || pm.environment.get("api_version") || "v1";
+pm.collectionVariables.set("api_version", apiVersion);
+
+const existingUserId = pm.collectionVariables.get("existing_user_id");
+const lastCreatedUserId = pm.collectionVariables.get("new_user_id");
+
+if (lastCreatedUserId) {
+    pm.collectionVariables.set("existing_user_id", lastCreatedUserId);
+} else if (!existingUserId) {
+    pm.sendRequest(`${pm.variables.get("base_url")}/api/${apiVersion}/users`, (error, response) => {
+        pm.expect(error).to.equal(null);
+        pm.expect(response).to.have.property("code", 200);
+
+        const users = response.json();
+        pm.expect(users).to.be.an("array").and.not.empty;
+
+        const seedLogin = pm.variables.get("seed_login");
+        const resolvedUser = users.find((user) => user.login === seedLogin) || users[0];
+        pm.collectionVariables.set("existing_user_id", resolvedUser.id);
+    });
+}
+```
+
+This keeps the folder limited to the exact files requested while still providing the required pre-request automation for the by-ID GET request.
+
 ## Import Instructions
 
 1. Create the request in Postman.
 2. Paste the matching pre-request script if one exists.
 3. Paste the matching test script.
-4. Save the request.
-5. Run requests in order.
+4. For `GET /api/{{api_version}}/users/{{existing_user_id}}`, also paste the pre-request snippet above.
+5. Save the request.
+6. Run requests in order.
 
 ## Troubleshooting
 
 - If a request cannot resolve `{{new_user_id}}`, previous steps did not run successfully.
-- If a GET-by-ID request cannot resolve `{{v1_seed_user_id}}` or `{{v2_seed_user_id}}`, run the corresponding GET-all request first.
+- If a GET-by-ID request cannot resolve `{{existing_user_id}}`, run the unified GET-all request first or use the pre-request snippet above.

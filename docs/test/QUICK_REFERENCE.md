@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This file is the fast setup guide for running the documented Postman integration tests with the least amount of context switching.
+This file is the fast setup guide for running the unified Postman integration tests with `{{api_version}}`.
 
 ## Covered Endpoints
 
@@ -20,6 +20,8 @@ This file is the fast setup guide for running the documented Postman integration
 | `seed_password` | shared seed password present in v1 and v2 |
 | `api_version` | `v1` or `v2` |
 
+Set `api_version` in the Postman environment before running the collection.
+
 ## Request URLs
 
 ### Automated E2E Flow
@@ -34,10 +36,8 @@ This file is the fast setup guide for running the documented Postman integration
 
 ### Public GET Requests
 
-- `GET {{base_url}}/api/v1/users`
-- `GET {{base_url}}/api/v1/users/{{v1_seed_user_id}}`
-- `GET {{base_url}}/api/v2/users`
-- `GET {{base_url}}/api/v2/users/{{v2_seed_user_id}}`
+- `GET {{base_url}}/api/{{api_version}}/users`
+- `GET {{base_url}}/api/{{api_version}}/users/{{existing_user_id}}`
 
 ## Bodies
 
@@ -110,8 +110,30 @@ This file is the fast setup guide for running the documented Postman integration
 | Public GET by valid ID | `200` |
 | Public GET by missing ID | `404` |
 
+## Running Tests For Both API Versions
+
+### Change the variable and rerun
+
+1. Set `api_version=v1`.
+2. Run the collection.
+3. Set `api_version=v2`.
+4. Run the same collection again.
+
+### Use Collection Runner data
+
+Use a data file like:
+
+```json
+[
+  { "api_version": "v1" },
+  { "api_version": "v2" }
+]
+```
+
+The same requests and scripts work for both versions.
+
 ## Troubleshooting
 
 - If `new_user_login` exceeds 20 characters, shorten the prefix in the pre-request script.
 - If step 5 fails, step 4 did not persist the updated credentials.
-- If `v1_seed_user_id` or `v2_seed_user_id` is empty, run the matching `get all users` request first.
+- If `existing_user_id` is empty, run the unified `get all users` request first or use the documented pre-request script on the by-ID request.
