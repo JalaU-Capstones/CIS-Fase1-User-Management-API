@@ -12,9 +12,17 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 
 import java.util.List;
+import java.util.LinkedHashSet;
 import java.util.UUID;
+import java.util.Set;
+import java.util.Collection;
+import java.util.ArrayList;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +30,7 @@ public class MongoUserService {
 
     private final MongoPersistencePort mongoPersistencePort;
     private final PasswordEncoder passwordEncoder;
+    private final MongoTemplate mongoTemplate;
 
     public List<UserResponseDto> getAllUsers() {
         return mongoPersistencePort.findAll().stream()
@@ -64,13 +73,64 @@ public class MongoUserService {
         return UserMapper.toResponseDto(mongoPersistencePort.save(user));
     }
 
+    @Transactional
     public void deleteUser(String id) {
         UUID uuid = UUID.fromString(id);
         User user = findUserById(uuid);
 
         checkOwnership(user);
 
-        mongoPersistencePort.deleteUserAndRelatedData(uuid);
+        String userId = uuid.toString();
+
+        deleteVotesByUser(userId);
+        deleteIdeasOwnedByUser(userId);
+        deleteTopicsOwnedByUser(userId);
+        mongoTemplate.remove(Query.query(Criteria.where("_id").is(userId)), "users");
+    }
+
+    private void deleteVotesByUser(String userId) {
+        mongoTemplate.remove(Query.query(anyOf(userId, "user_id", "userId", "UserId")), "votes");
+    }
+
+    private void deleteIdeasOwnedByUser(String userId) {
+        List<String> ideaIds = mongoTemplate.findDistinct(
+                Query.query(anyOf(userId, "owner_id", "ownerId", "OwnerId")),
+                "_id",
+                "ideas",
+                String.class
+        );
+
+        deleteVotesByIdeaIds(ideaIds);
+        mongoTemplate.remove(Query.query(anyOf(userId, "owner_id", "ownerId", "OwnerId")), "ideas");
+    }
+
+    private void deleteTopicsOwnedByUser(String userId) {
+        mongoTemplate.remove(Query.query(anyOf(userId, "owner_id", "ownerId", "OwnerId")), "topics");
+    }
+
+    private void deleteVotesByIdeaIds(List<String> ideaIds) {
+        Set<String> uniqueIdeaIds = new LinkedHashSet<>(ideaIds);
+        if (uniqueIdeaIds.isEmpty()) {
+            return;
+        }
+
+        mongoTemplate.remove(Query.query(anyOf(uniqueIdeaIds, "idea_id", "ideaId", "IdeaId")), "votes");
+    }
+
+    private Criteria anyOf(Object value, String... fieldNames) {
+        List<Criteria> alternatives = new ArrayList<>();
+
+        if (value instanceof Collection<?> values) {
+            for (String fieldName : fieldNames) {
+                alternatives.add(Criteria.where(fieldName).in(values));
+            }
+        } else {
+            for (String fieldName : fieldNames) {
+                alternatives.add(Criteria.where(fieldName).is(value));
+            }
+        }
+
+        return new Criteria().orOperator(alternatives.toArray(Criteria[]::new));
     }
 
     private User findUserById(UUID id) {
