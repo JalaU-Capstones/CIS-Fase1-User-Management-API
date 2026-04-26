@@ -26,7 +26,7 @@ public class UserDataMigrationService {
         MigrationResult result = new MigrationResult();
 
         try {
-            // 1. Clean MongoDB if requested
+            // Clean MongoDB if requested
             if (cleanBeforeMigrate && !dryRun) {
                 log.info("Cleaning existing users from MongoDB...");
                 var existingUsers = mongoPersistencePort.findAll();
@@ -37,7 +37,7 @@ public class UserDataMigrationService {
                 log.info("Cleaned {} users from MongoDB", result.cleanedCount);
             }
 
-            // 2. Get all users from MySQL
+            // Get all users from MySQL
             List<User> mysqlUsers = mysqlUserRepository.findAll();
             result.totalFound = mysqlUsers.size();
             log.info("Found {} users in MySQL", result.totalFound);
@@ -50,7 +50,7 @@ public class UserDataMigrationService {
                 return result;
             }
 
-            // 3. Migrate each user
+            // Migrate each user
             int successCount = 0;
             int failCount = 0;
             int skippedCount = 0;
@@ -85,7 +85,7 @@ public class UserDataMigrationService {
             result.skippedCount = skippedCount;
             result.errors = errors;
 
-            // 4. Verification
+            // Verification
             List<User> finalUsers = mongoPersistencePort.findAll();
             result.finalCount = finalUsers.size();
 
