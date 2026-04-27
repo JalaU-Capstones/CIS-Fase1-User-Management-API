@@ -17,6 +17,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
 import java.util.List;
@@ -26,11 +28,14 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(MockitoExtension.class)
 class MongoUserServiceTest {
@@ -40,6 +45,9 @@ class MongoUserServiceTest {
 
     @Mock
     private PasswordEncoder passwordEncoder;
+
+    @Mock
+    private MongoTemplate mongoTemplate;
 
     @InjectMocks
     private MongoUserService mongoUserService;
@@ -220,10 +228,24 @@ class MongoUserServiceTest {
 
         mockAuthentication(login);
         given(mongoPersistencePort.findById(id)).willReturn(Optional.of(user));
+        given(mongoTemplate.findDistinct(any(Query.class), eq("_id"), eq("ideas"), eq(String.class)))
+                .willReturn(List.of("idea-1"));
 
         mongoUserService.deleteUser(idStr);
 
-        then(mongoPersistencePort).should().deleteUserAndRelatedData(id);
+        var inOrder = inOrder(mongoTemplate);
+        inOrder.verify(mongoTemplate).remove(argThat(query ->
+                query.getQueryObject().toJson().contains("\"UserId\"")), eq("votes"));
+        inOrder.verify(mongoTemplate).findDistinct(argThat(query ->
+                query.getQueryObject().toJson().contains("\"OwnerId\"")), eq("_id"), eq("ideas"), eq(String.class));
+        inOrder.verify(mongoTemplate).remove(argThat(query ->
+                query.getQueryObject().toJson().contains("\"IdeaId\"")), eq("votes"));
+        inOrder.verify(mongoTemplate).remove(argThat(query ->
+                query.getQueryObject().toJson().contains("\"OwnerId\"")), eq("ideas"));
+        inOrder.verify(mongoTemplate).remove(argThat(query ->
+                query.getQueryObject().toJson().contains("\"OwnerId\"")), eq("topics"));
+        inOrder.verify(mongoTemplate).remove(any(Query.class), eq("users"));
+        then(mongoPersistencePort).should(never()).deleteUserAndRelatedData(any());
     }
 
     @Test
@@ -235,6 +257,7 @@ class MongoUserServiceTest {
                 .isInstanceOf(ResourceNotFoundException.class);
 
         then(mongoPersistencePort).should(never()).deleteUserAndRelatedData(any());
+        verifyNoInteractions(mongoTemplate);
     }
 
     @Test
@@ -250,5 +273,6 @@ class MongoUserServiceTest {
                 .hasMessageContaining("You can only modify your own user record");
 
         then(mongoPersistencePort).should(never()).deleteUserAndRelatedData(any());
+        verifyNoInteractions(mongoTemplate);
     }
 }
