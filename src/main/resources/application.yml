@@ -7,6 +7,16 @@ spring:
   jpa:
     open-in-view: false
 
+  datasource:
+    url: jdbc:mysql://localhost:3307/sd3
+    username: sd3user
+    password: sd3pass
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/user_management
+
 db:
   type: mysql
 
@@ -14,3 +24,85 @@ application-properties:
   jwt:
     secret-key: "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"
     expiration-time: 864000000 # 10 days
+
+---
+# Perfil dev
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  datasource:
+    url: jdbc:mysql://localhost:3307/sd3
+    username: sd3user
+    password: sd3pass
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/user_management
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+logging:
+  level:
+    com.cis.api: DEBUG
+
+---
+# Perfil prod
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:cis_prod}
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  data:
+    mongodb:
+      uri: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/${MONGO_DB:cis_prod}
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+logging:
+  level:
+    com.cis.api: WARN
+
+---
+# Perfil migrate (para ejecutar migración sin web server)
+spring:
+  config:
+    activate:
+      on-profile: migrate
+
+  main:
+    web-application-type: none
+
+  datasource:
+    url: jdbc:mysql://localhost:3307/sd3
+    username: sd3user
+    password: sd3pass
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  data:
+    mongodb:
+      uri: mongodb://localhost:27017/user_management
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+logging:
+  level:
+    com.cis.api: INFO
+    org.springframework: WARN

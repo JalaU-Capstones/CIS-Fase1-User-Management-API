@@ -1,8 +1,9 @@
 package com.cis.api.migration;
 
+import com.cis.api.model.MongoUser;
 import com.cis.api.model.User;
+import com.cis.api.repository.MongoUserSpringRepository;
 import com.cis.api.repository.UserRepository;
-import com.cis.api.repository.MongoPersistencePort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -10,15 +11,14 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class UserDataMigrationService {
 
-    private final UserRepository mysqlUserRepository;      // MySQL/MyBatis (v1)
-    private final MongoPersistencePort mongoPersistencePort; // MongoDB (v2)
+    private final UserRepository mysqlUserRepository;
+    private final MongoUserSpringRepository mongoUserRepository;
 
     @Transactional
     public MigrationResult migrateUsers(boolean dryRun, boolean cleanBeforeMigrate) {
@@ -26,18 +26,16 @@ public class UserDataMigrationService {
         MigrationResult result = new MigrationResult();
 
         try {
-            // Clean MongoDB if requested
+            // 1. Clean MongoDB if requested
             if (cleanBeforeMigrate && !dryRun) {
                 log.info("Cleaning existing users from MongoDB...");
-                var existingUsers = mongoPersistencePort.findAll();
-                for (User user : existingUsers) {
-                    mongoPersistencePort.deleteUserAndRelatedData(user.getId());
-                    result.cleanedCount++;
-                }
-                log.info("Cleaned {} users from MongoDB", result.cleanedCount);
+                long count = mongoUserRepository.count();
+                mongoUserRepository.deleteAll();
+                result.cleanedCount = (int) count;
+                log.info("Cleaned {} users from MongoDB", count);
             }
 
-            // Get all users from MySQL
+            // 2. Get all users from MySQL
             List<User> mysqlUsers = mysqlUserRepository.findAll();
             result.totalFound = mysqlUsers.size();
             log.info("Found {} users in MySQL", result.totalFound);
@@ -50,7 +48,7 @@ public class UserDataMigrationService {
                 return result;
             }
 
-            // Migrate each user
+            // 3. Migrate each user with transformation
             int successCount = 0;
             int failCount = 0;
             int skippedCount = 0;
@@ -58,24 +56,24 @@ public class UserDataMigrationService {
 
             for (User mysqlUser : mysqlUsers) {
                 try {
-                    // Check if already exists in MongoDB
-                    if (!mongoPersistencePort.existsByLogin(mysqlUser.getLogin())) {
-                        // Generate new UUID if needed, or keep existing
-                        if (mysqlUser.getId() == null) {
-                            mysqlUser.setId(UUID.randomUUID());
-                        }
+                    // Check if already exists in MongoDB by ID or login
+                    boolean existsById = mongoUserRepository.existsById(mysqlUser.getId().toString());
+                    boolean existsByLogin = mongoUserRepository.existsByLogin(mysqlUser.getLogin());
 
-                        // Save to MongoDB
-                        mongoPersistencePort.save(mysqlUser);
+                    if (!existsById && !existsByLogin) {
+                        MongoUser mongoUser = transformToMongoUser(mysqlUser);
+                        mongoUserRepository.save(mongoUser);
                         successCount++;
-                        log.debug("Migrated user: {}", mysqlUser.getLogin());
+                        log.debug("Migrated user: {} (id: {})", mysqlUser.getLogin(), mysqlUser.getId());
                     } else {
                         skippedCount++;
-                        log.warn("User {} already exists in MongoDB, skipping", mysqlUser.getLogin());
+                        log.warn("User {} (id: {}) already exists in MongoDB, skipping",
+                                mysqlUser.getLogin(), mysqlUser.getId());
                     }
                 } catch (Exception e) {
                     failCount++;
-                    errors.add(String.format("User %s: %s", mysqlUser.getLogin(), e.getMessage()));
+                    errors.add(String.format("User %s (id: %s): %s",
+                            mysqlUser.getLogin(), mysqlUser.getId(), e.getMessage()));
                     log.error("Failed to migrate user {}: {}", mysqlUser.getLogin(), e.getMessage(), e);
                 }
             }
@@ -85,9 +83,9 @@ public class UserDataMigrationService {
             result.skippedCount = skippedCount;
             result.errors = errors;
 
-            // Verification
-            List<User> finalUsers = mongoPersistencePort.findAll();
-            result.finalCount = finalUsers.size();
+            // 4. Verification
+            long finalCount = mongoUserRepository.count();
+            result.finalCount = (int) finalCount;
 
             log.info("Migration completed: {} succeeded, {} failed, {} skipped",
                     successCount, failCount, skippedCount);
@@ -99,6 +97,28 @@ public class UserDataMigrationService {
         }
 
         return result;
+    }
+
+    /**
+     * Transform MySQL User to MongoDB MongoUser document
+     * Ensures field names match exactly what C# API expects
+     */
+    private MongoUser transformToMongoUser(User mysqlUser) {
+        MongoUser mongoUser = new MongoUser();
+
+        // _id must be UUID string (not ObjectId)
+        mongoUser.setId(mysqlUser.getId().toString());
+
+        // Field names exactly: name, login, password (case-sensitive)
+        mongoUser.setName(mysqlUser.getName());
+        mongoUser.setLogin(mysqlUser.getLogin());
+        mongoUser.setPassword(mysqlUser.getPassword());
+
+        // Metadata for tracking
+        mongoUser.setMigratedAt(System.currentTimeMillis());
+        mongoUser.setSource("mysql");
+
+        return mongoUser;
     }
 
     public static class MigrationResult {

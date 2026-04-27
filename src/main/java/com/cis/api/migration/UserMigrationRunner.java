@@ -1,0 +1,119 @@
+package com.cis.api.migration;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.CommandLineRunner;
+import org.springframework.context.annotation.Profile;
+import org.springframework.stereotype.Component;
+
+import java.util.Scanner;
+
+@Slf4j
+@Component
+@Profile({"migrate", "dev"})
+@RequiredArgsConstructor
+public class UserMigrationRunner implements CommandLineRunner {
+
+    private final UserDataMigrationService migrationService;
+
+    @Override
+    public void run(String... args) throws Exception {
+
+        boolean hasMigrationArgs = false;
+        boolean dryRun = false;
+        boolean clean = false;
+        boolean autoConfirm = false;
+
+        for (String arg : args) {
+            if (arg.equals("--dry-run") || arg.equals("--clean") || arg.equals("--yes")) {
+                hasMigrationArgs = true;
+            }
+            if (arg.equals("--dry-run")) dryRun = true;
+            if (arg.equals("--clean")) clean = true;
+            if (arg.equals("--yes")) autoConfirm = true;
+        }
+
+        if (!hasMigrationArgs) {
+            log.debug("No migration arguments provided. Starting normal application.");
+            return;
+        }
+
+        log.info("========================================");
+        log.info("  USER MIGRATION TOOL - MySQL to MongoDB");
+        log.info("========================================");
+
+        log.info("Configuration:");
+        log.info("  - Dry run: {}", dryRun);
+        log.info("  - Clean before migrate: {}", clean);
+        log.info("  - Source: MySQL (v1)");
+        log.info("  - Target: MongoDB (v2)");
+
+        if (!dryRun && !autoConfirm) {
+            log.warn("\n WARNING: This will modify data in MongoDB!");
+            log.warn("   - Clean mode: {}", clean);
+            log.warn("   - Data will be migrated from MySQL to MongoDB\n");
+
+            System.out.print("Do you want to continue? (yes/no): ");
+            Scanner scanner = new Scanner(System.in);
+            String confirmation = scanner.nextLine();
+
+            if (!"yes".equalsIgnoreCase(confirmation)) {
+                log.info("Migration cancelled by user.");
+                return;
+            }
+        }
+
+        // Execute migration
+        log.info("\n Starting migration...\n");
+        long startTime = System.currentTimeMillis();
+
+        var result = migrationService.migrateUsers(dryRun, clean);
+
+        long duration = System.currentTimeMillis() - startTime;
+
+        // Print results
+        printResults(result, duration, dryRun);
+
+        if (result.hasErrors() && !dryRun) {
+            System.exit(1);
+        } else {
+            System.exit(0);
+        }
+    }
+
+    private void printResults(UserDataMigrationService.MigrationResult result, long duration, boolean dryRun) {
+        log.info("\n========================================");
+        log.info("         MIGRATION RESULTS");
+        log.info("========================================");
+        log.info("📊 Statistics:");
+        log.info("   - Total users found in MySQL: {}", result.totalFound);
+        log.info("   - Successfully migrated: {}", result.successCount);
+        log.info("   - Failed migrations: {}", result.failCount);
+        log.info("   - Skipped (already exist): {}", result.skippedCount);
+        log.info("   - Cleaned from MongoDB: {}", result.cleanedCount);
+        log.info("   - Final users in MongoDB: {}", result.finalCount);
+        log.info("  Duration: {} ms ({} seconds)", duration, duration / 1000);
+
+        if (!result.errors.isEmpty()) {
+            log.error("\n Errors encountered:");
+            for (String error : result.errors) {
+                log.error("   - {}", error);
+            }
+        }
+
+        if (dryRun) {
+            log.info("\n  Dry run completed - no data was modified");
+        } else if (result.failCount == 0 && result.successCount > 0) {
+            log.info("\n Migration completed successfully!");
+        } else if (result.skippedCount > 0 && result.successCount == 0 && result.totalFound > 0) {
+            log.warn("\n️  Migration skipped - users already exist in MongoDB");
+        } else if (result.successCount > 0) {
+            log.warn("\n️  Migration completed with warnings.");
+        } else {
+            log.error("\n Migration failed!");
+        }
+
+        log.info("\n Verification:");
+        log.info("   Run: curl http://localhost:8080/api/v2/users");
+    }
+}
