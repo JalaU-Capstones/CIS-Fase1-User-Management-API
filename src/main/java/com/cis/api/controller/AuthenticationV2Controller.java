@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Controller for authentication-related endpoints V2 (MongoDB).
  */
+@Profile("!migrate")
 @Tag(name = "Authentication V2", description = "Operations related to user authentication (MongoDB)")
 @RestController
 @RequestMapping("/api/v2/auth")

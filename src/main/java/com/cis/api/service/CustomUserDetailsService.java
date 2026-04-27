@@ -3,6 +3,7 @@ package com.cis.api.service;
 import com.cis.api.model.User;
 import com.cis.api.repository.UserPersistencePort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -10,6 +11,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 
+@Profile("!migrate")
 @Service
 @RequiredArgsConstructor
 public class CustomUserDetailsService implements UserDetailsService {

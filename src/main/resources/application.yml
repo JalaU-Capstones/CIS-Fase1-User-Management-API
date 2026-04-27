@@ -7,26 +7,15 @@ spring:
   jpa:
     open-in-view: false
 
-  datasource:
-    url: jdbc:mysql://localhost:3307/sd3
-    username: sd3user
-    password: sd3pass
-    driver-class-name: com.mysql.cj.jdbc.Driver
-
-  data:
-    mongodb:
-      uri: mongodb://localhost:27017/sd3
-
 db:
   type: mysql
 
 application-properties:
   jwt:
     secret-key: "404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970"
-    expiration-time: 864000000 # 10 days
+    expiration-time: 864000000
 
 ---
-# Perfil dev
 spring:
   config:
     activate:
@@ -52,21 +41,20 @@ logging:
     com.cis.api: DEBUG
 
 ---
-# Perfil prod
 spring:
   config:
     activate:
       on-profile: prod
 
   datasource:
-    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:cis_prod}
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:sd3}
     username: ${DB_USER:root}
     password: ${DB_PASSWORD:password}
     driver-class-name: com.mysql.cj.jdbc.Driver
 
   data:
     mongodb:
-      uri: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/${MONGO_DB:cis_prod}
+      uri: mongodb://${MONGO_HOST:localhost}:${MONGO_PORT:27017}/${MONGO_DB:sd3}
 
   jpa:
     hibernate:
@@ -78,7 +66,6 @@ logging:
     com.cis.api: WARN
 
 ---
-# Perfil migrate (para ejecutar migración sin web server)
 spring:
   config:
     activate:
@@ -86,6 +73,14 @@ spring:
 
   main:
     web-application-type: none
+
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.security.servlet.SecurityAutoConfiguration
+      - org.springframework.boot.autoconfigure.security.servlet.UserDetailsServiceAutoConfiguration
+      - org.springframework.boot.autoconfigure.web.servlet.WebMvcAutoConfiguration
+      - org.springframework.boot.autoconfigure.web.servlet.DispatcherServletAutoConfiguration
+      - org.springframework.boot.autoconfigure.web.servlet.error.ErrorMvcAutoConfiguration
 
   datasource:
     url: jdbc:mysql://localhost:3307/sd3

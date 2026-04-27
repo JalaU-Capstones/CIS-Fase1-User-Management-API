@@ -259,7 +259,7 @@ The migration does **not** delete MySQL data. To rollback:
 
 ```bash
 # Drop MongoDB collection
-mongosh mongodb://localhost:27017/user_management
+mongosh mongodb://localhost:27017/sd3
 db.users.drop()
 exit
 

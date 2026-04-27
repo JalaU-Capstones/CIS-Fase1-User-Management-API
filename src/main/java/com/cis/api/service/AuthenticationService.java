@@ -4,12 +4,14 @@ import com.cis.api.dto.AuthRequest;
 import com.cis.api.dto.AuthResponse;
 import com.cis.api.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
 
+@Profile("!migrate")
 @Service
 @RequiredArgsConstructor
 public class AuthenticationService {

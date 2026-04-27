@@ -19,6 +19,14 @@ import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * Integration tests for UserDataMigrationService.
+ *
+ * These tests require Docker to be running and are disabled by default in CI/CD.
+ * To run them manually:
+ *   1. Ensure Docker is running: docker ps
+ *   2. Run: mvn test -Dgroups=integration
+ */
 @Disabled("Requires Docker - Testcontainers not available in CI/CD pipeline. Run manually with Docker installed.")
 @Tag("integration")
 @SpringBootTest
