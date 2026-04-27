@@ -11,6 +11,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MongoDBContainer;
+import org.testcontainers.containers.MySQLContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
@@ -22,25 +23,32 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Integration tests for UserDataMigrationService.
  *
- * These tests require Docker to be running and are disabled by default in CI/CD.
- * To run them manually:
- *   1. Ensure Docker is running: docker ps
- *   2. Run: mvn test -Dgroups=integration
+ * These tests require Docker to be running because they use Testcontainers
+ * for both MongoDB and MySQL.
  */
-@Disabled("Requires Docker - Testcontainers not available in CI/CD pipeline. Run manually with Docker installed.")
 @Tag("integration")
 @SpringBootTest
 @ActiveProfiles("test")
 @Testcontainers
-@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class UserDataMigrationServiceIntegrationTest {
 
     @Container
-    static MongoDBContainer mongoDBContainer = new MongoDBContainer(DockerImageName.parse("mongo:6.0"))
-            .withExposedPorts(27017);
+    static final MongoDBContainer mongoDBContainer = new MongoDBContainer(DockerImageName.parse("mongo:6.0"));
+
+    @Container
+    static final MySQLContainer<?> mysqlContainer = new MySQLContainer<>(DockerImageName.parse("mysql:8.0"))
+            .withDatabaseName("sd3")
+            .withUsername("sd3user")
+            .withPassword("sd3pass")
+            .withInitScript("init.sql");
 
     @DynamicPropertySource
     static void setProperties(DynamicPropertyRegistry registry) {
+        registry.add("spring.datasource.url", mysqlContainer::getJdbcUrl);
+        registry.add("spring.datasource.username", mysqlContainer::getUsername);
+        registry.add("spring.datasource.password", mysqlContainer::getPassword);
+        registry.add("spring.datasource.driver-class-name", mysqlContainer::getDriverClassName);
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
         registry.add("spring.data.mongodb.uri", mongoDBContainer::getReplicaSetUrl);
         registry.add("spring.data.mongodb.database", () -> "testdb");
     }
@@ -59,6 +67,7 @@ class UserDataMigrationServiceIntegrationTest {
     @BeforeEach
     void setUp() {
         // Clean repositories before each test
+        mysqlUserRepository.deleteAll();
         mongoUserRepository.deleteAll();
 
         testUser = new User();
@@ -73,15 +82,14 @@ class UserDataMigrationServiceIntegrationTest {
     void tearDown() {
         // Clean up
         try {
-            mysqlUserRepository.deleteById(testUser.getId());
+            mysqlUserRepository.deleteAll();
         } catch (Exception e) {
-            // User might have been deleted already
+            // Test cleanup should not fail the suite.
         }
         mongoUserRepository.deleteAll();
     }
 
     @Test
-    @Order(1)
     void testDryRunMigration_DoesNotSaveToMongoDB() {
         // When
         var result = migrationService.migrateUsers(true, false);
@@ -94,7 +102,6 @@ class UserDataMigrationServiceIntegrationTest {
     }
 
     @Test
-    @Order(2)
     void testFullMigration_MigratesUserSuccessfully() {
         // When
         var result = migrationService.migrateUsers(false, false);
@@ -114,7 +121,6 @@ class UserDataMigrationServiceIntegrationTest {
     }
 
     @Test
-    @Order(3)
     void testMigration_IsIdempotent() {
         // First migration
         var firstResult = migrationService.migrateUsers(false, false);
@@ -129,7 +135,6 @@ class UserDataMigrationServiceIntegrationTest {
     }
 
     @Test
-    @Order(4)
     void testMigration_WithCleanFlag_ReplacesData() {
         // First migration
         var firstResult = migrationService.migrateUsers(false, false);
@@ -147,8 +152,6 @@ class UserDataMigrationServiceIntegrationTest {
         // Clean and migrate
         var cleanResult = migrationService.migrateUsers(false, true);
 
-        // After clean, should have exactly 1 user (the second one)
-        // Because clean removes all, then migrates current MySQL users
         assertThat(cleanResult.totalFound).isEqualTo(2); // Both users in MySQL
         assertThat(cleanResult.cleanedCount).isEqualTo(1);
         assertThat(mongoUserRepository.count()).isEqualTo(2); // Both migrated after clean
@@ -158,7 +161,6 @@ class UserDataMigrationServiceIntegrationTest {
     }
 
     @Test
-    @Order(5)
     void testMigration_HandlesDuplicateLoginGracefully() {
         // First migration
         migrationService.migrateUsers(false, false);
@@ -173,7 +175,6 @@ class UserDataMigrationServiceIntegrationTest {
     }
 
     @Test
-    @Order(6)
     void testMongoUserSchema_MatchesExpectedFormat() {
         // Migrate user
         migrationService.migrateUsers(false, false);

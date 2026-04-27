@@ -59,7 +59,7 @@ docker ps
 - Host: `localhost`, Port: `3307`, Database: `sd3`, User: `sd3user`, Password: `sd3pass`
 
 4. MongoDB Connection:
-- URI: `mongodb://localhost:27017/user_management`
+- URI: `mongodb://localhost:27017/sd3`
 
 ## Run the Application
 ```bash

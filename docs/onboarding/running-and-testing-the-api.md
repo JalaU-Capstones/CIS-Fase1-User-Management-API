@@ -49,7 +49,7 @@ docker compose up -d
 This will start:
 
 - **MySQL:** `localhost:3307` — Database: `sd3`, User: `sd3user`, Password: `sd3pass`
-- **MongoDB:** `mongodb://localhost:27017/user_management`
+- **MongoDB:** `mongodb://localhost:27017/sd3`
 
 **Verify it's running:**
 
@@ -183,16 +183,16 @@ java -jar target/user-management-api-0.0.1-SNAPSHOT.jar --spring.profiles.active
 
 ### Running Integration Tests
 
-The integration tests require Docker to run. They are disabled by default in the CI/CD pipeline.
+The integration tests require Docker to run because they start MySQL and MongoDB with Testcontainers.
 
-To run them manually:
+Run the full suite:
 
 ```bash
 # Ensure Docker is running
 docker ps
 
-# Run integration tests
-mvn test -Dgroups=integration
+# Run unit and integration tests
+mvn clean test
 ```
 
 ### Verify Migration
