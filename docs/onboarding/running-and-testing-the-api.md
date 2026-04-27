@@ -192,11 +192,8 @@ curl http://localhost:8080/api/v2/users
 # Check user count
 curl -s http://localhost:8080/api/v2/users | jq length
 
-# Check specific user by login
-curl http://localhost:8080/api/v2/users/by-login/jroca
-
-# Check migration status
-curl http://localhost:8080/api/migration/status
+# Check specific user by ID (replace with actual UUID from the list)
+curl http://localhost:8080/api/v2/users/{user-id}
 ```
 
 ### Expected Output

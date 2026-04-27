@@ -20,6 +20,13 @@ public class UserDataMigrationService {
     private final UserRepository mysqlUserRepository;
     private final MongoUserSpringRepository mongoUserRepository;
 
+    /**
+     * Migrates users from MySQL to MongoDB.
+     *
+     * @param dryRun if true, only previews what would be migrated without saving any data
+     * @param cleanBeforeMigrate if true, deletes all existing users from MongoDB before migration
+     * @return MigrationResult containing statistics about the migration operation
+     */
     @Transactional
     public MigrationResult migrateUsers(boolean dryRun, boolean cleanBeforeMigrate) {
         log.info("Starting user migration from MySQL to MongoDB (Phase 3)");
@@ -48,7 +55,7 @@ public class UserDataMigrationService {
                 return result;
             }
 
-            // 3. Migrate each user with transformation
+            // 3. Migrate each user
             int successCount = 0;
             int failCount = 0;
             int skippedCount = 0;
@@ -100,27 +107,27 @@ public class UserDataMigrationService {
     }
 
     /**
-     * Transform MySQL User to MongoDB MongoUser document
-     * Ensures field names match exactly what C# API expects
+     * Transforms a MySQL User entity to a MongoDB MongoUser document.
+     * Ensures field names match exactly what the C# Phase 2 API expects.
+     *
+     * @param mysqlUser the MySQL user entity to transform
+     * @return a MongoUser document ready for MongoDB persistence
      */
     private MongoUser transformToMongoUser(User mysqlUser) {
         MongoUser mongoUser = new MongoUser();
-
-        // _id must be UUID string (not ObjectId)
         mongoUser.setId(mysqlUser.getId().toString());
-
-        // Field names exactly: name, login, password (case-sensitive)
         mongoUser.setName(mysqlUser.getName());
         mongoUser.setLogin(mysqlUser.getLogin());
         mongoUser.setPassword(mysqlUser.getPassword());
-
-        // Metadata for tracking
         mongoUser.setMigratedAt(System.currentTimeMillis());
         mongoUser.setSource("mysql");
-
         return mongoUser;
     }
 
+    /**
+     * Result container for migration operations.
+     * Contains statistics about the migration run.
+     */
     public static class MigrationResult {
         public int totalFound = 0;
         public int successCount = 0;
