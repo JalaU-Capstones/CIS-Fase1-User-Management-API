@@ -6,11 +6,12 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
 import java.util.Scanner;
 
 @Slf4j
 @Component
-@Profile({"migrate", "dev"})
+@Profile("migrate")
 @RequiredArgsConstructor
 public class UserMigrationRunner implements CommandLineRunner {
 
@@ -18,25 +19,10 @@ public class UserMigrationRunner implements CommandLineRunner {
 
     @Override
     public void run(String... args) throws Exception {
-
-        boolean hasMigrationArgs = false;
-        boolean dryRun = false;
-        boolean clean = false;
-        boolean autoConfirm = false;
-
-        for (String arg : args) {
-            if (arg.equals("--dry-run") || arg.equals("--clean") || arg.equals("--yes")) {
-                hasMigrationArgs = true;
-            }
-            if (arg.equals("--dry-run")) dryRun = true;
-            if (arg.equals("--clean")) clean = true;
-            if (arg.equals("--yes")) autoConfirm = true;
-        }
-
-        if (!hasMigrationArgs) {
-            log.debug("No migration arguments provided. Starting normal application.");
-            return;
-        }
+        // Parse arguments
+        boolean dryRun = Arrays.asList(args).contains("--dry-run");
+        boolean clean = Arrays.asList(args).contains("--clean");
+        boolean autoConfirm = Arrays.asList(args).contains("--yes");
 
         log.info("========================================");
         log.info("  USER MIGRATION TOOL - MySQL to MongoDB");
@@ -48,6 +34,7 @@ public class UserMigrationRunner implements CommandLineRunner {
         log.info("  - Source: MySQL (v1)");
         log.info("  - Target: MongoDB (v2)");
 
+        // Confirmación si no es dry-run ni auto-confirm
         if (!dryRun && !autoConfirm) {
             log.warn("\n  WARNING: This will modify data in MongoDB!");
             log.warn("   - Clean mode: {}", clean);
@@ -75,14 +62,15 @@ public class UserMigrationRunner implements CommandLineRunner {
         // Print results
         printResults(result, duration, dryRun);
 
-        // Exit with appropriate code for CI/CD
+        // Exit with appropriate code
         if (dryRun) {
+            log.info("Dry run completed. Exiting with code 0.");
             System.exit(0);
         } else if (result.hasErrors() || result.failCount > 0) {
             log.error("Migration failed with errors. Exiting with code 1.");
             System.exit(1);
         } else if (result.successCount == 0 && result.totalFound > 0) {
-            log.warn("No users were migrated (already exist?). Exiting with code 0.");
+            log.warn("No new users were migrated (already exist?). Exiting with code 0.");
             System.exit(0);
         } else {
             log.info("Migration completed successfully. Exiting with code 0.");
@@ -94,18 +82,14 @@ public class UserMigrationRunner implements CommandLineRunner {
         log.info("\n========================================");
         log.info("         MIGRATION RESULTS");
         log.info("========================================");
-        log.info("📊 Statistics:");
+        log.info(" Statistics:");
         log.info("   - Total users found in MySQL: {}", result.totalFound);
         log.info("   - Successfully migrated: {}", result.successCount);
         log.info("   - Failed migrations: {}", result.failCount);
         log.info("   - Skipped (already exist): {}", result.skippedCount);
         log.info("   - Cleaned from MongoDB: {}", result.cleanedCount);
         log.info("   - Final users in MongoDB: {}", result.finalCount);
-        log.info("⏱️  Duration: {} ms ({} seconds)", duration, duration / 1000);
-
-        // Summary log for production monitoring
-        log.info(" MIGRATION SUMMARY: MySQL={}, Migrated={}, Failed={}, Skipped={}, MongoDB={}",
-                result.totalFound, result.successCount, result.failCount, result.skippedCount, result.finalCount);
+        log.info("  Duration: {} ms ({} seconds)", duration, duration / 1000);
 
         if (!result.errors.isEmpty()) {
             log.error("\n❌ Errors encountered:");
@@ -119,9 +103,9 @@ public class UserMigrationRunner implements CommandLineRunner {
         } else if (result.failCount == 0 && result.successCount > 0) {
             log.info("\n Migration completed successfully!");
         } else if (result.skippedCount > 0 && result.successCount == 0 && result.totalFound > 0) {
-            log.warn("\n️  Migration skipped - users already exist in MongoDB");
+            log.warn("\n Migration skipped - users already exist in MongoDB");
         } else if (result.successCount > 0) {
-            log.warn("\n️  Migration completed with warnings.");
+            log.warn("\n Migration completed with warnings.");
         } else if (result.totalFound == 0) {
             log.info("\n No users found in MySQL to migrate.");
         } else {

@@ -158,7 +158,7 @@ mvn spring-boot:run -Dspring-boot.run.profiles=migrate -Dspring-boot.run.argumen
 **Execute full migration (with confirmation prompt):**
 
 ```bash
-mvn spring-boot:run -Dspring-boot.run.profiles=migrate -Dspring-boot.run.arguments="--yes"
+mvn spring-boot:run -Dspring-boot.run.profiles=migrate
 ```
 
 **Clean and migrate (removes existing MongoDB data first):**
@@ -170,16 +170,30 @@ mvn spring-boot:run -Dspring-boot.run.profiles=migrate -Dspring-boot.run.argumen
 **Run using JAR file:**
 
 ```bash
-java -jar target/user-management-api-0.0.1-SNAPSHOT.jar --spring.profiles.active=migrate --spring-boot.run.arguments="--yes"
+java -jar target/user-management-api-0.0.1-SNAPSHOT.jar --spring.profiles.active=migrate --spring-boot.run.arguments="--dry-run"
 ```
 
 ### Migration Options
 
 | Option | Description |
-|--------|-------------|
+|--------|------------|
 | `--dry-run` | Preview what would be migrated without saving any data |
 | `--clean` | Remove all existing users from MongoDB before migration |
 | `--yes` | Skip confirmation prompt (for automation) |
+
+### Running Integration Tests
+
+The integration tests require Docker to run. They are disabled by default in the CI/CD pipeline.
+
+To run them manually:
+
+```bash
+# Ensure Docker is running
+docker ps
+
+# Run integration tests
+mvn test -Dgroups=integration
+```
 
 ### Verify Migration
 

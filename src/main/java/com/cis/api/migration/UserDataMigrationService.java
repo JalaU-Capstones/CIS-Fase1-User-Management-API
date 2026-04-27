@@ -119,8 +119,6 @@ public class UserDataMigrationService {
         mongoUser.setName(mysqlUser.getName());
         mongoUser.setLogin(mysqlUser.getLogin());
         mongoUser.setPassword(mysqlUser.getPassword());
-        mongoUser.setMigratedAt(System.currentTimeMillis());
-        mongoUser.setSource("mysql");
         return mongoUser;
     }
 

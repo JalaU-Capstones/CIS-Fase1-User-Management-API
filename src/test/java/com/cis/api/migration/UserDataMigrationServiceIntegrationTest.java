@@ -103,8 +103,6 @@ class UserDataMigrationServiceIntegrationTest {
         assertThat(migratedUser.getName()).isEqualTo(testUser.getName());
         assertThat(migratedUser.getLogin()).isEqualTo(testUser.getLogin());
         assertThat(migratedUser.getPassword()).isEqualTo(testUser.getPassword());
-        assertThat(migratedUser.getMigratedAt()).isNotNull();
-        assertThat(migratedUser.getSource()).isEqualTo("mysql");
     }
 
     @Test
