@@ -34,7 +34,6 @@ public class UserMigrationRunner implements CommandLineRunner {
         log.info("  - Source: MySQL (v1)");
         log.info("  - Target: MongoDB (v2)");
 
-        // Confirmación si no es dry-run ni auto-confirm
         if (!dryRun && !autoConfirm) {
             log.warn("\n  WARNING: This will modify data in MongoDB!");
             log.warn("   - Clean mode: {}", clean);
