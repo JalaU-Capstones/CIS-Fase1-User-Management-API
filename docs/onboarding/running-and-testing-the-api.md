@@ -183,16 +183,28 @@ java -jar target/user-management-api-0.0.1-SNAPSHOT.jar --spring.profiles.active
 
 ### Running Integration Tests
 
-The integration tests require Docker to run because they start MySQL and MongoDB with Testcontainers.
+The integration tests require Docker because they start MySQL and MongoDB with Testcontainers.
 
-Run the full suite:
+Run the default test suite without Docker-backed integration tests:
+
+```bash
+mvn clean test
+```
+
+Run the full suite, including `@Tag("integration")` tests, when Docker is available:
 
 ```bash
 # Ensure Docker is running
 docker ps
 
 # Run unit and integration tests
-mvn clean test
+mvn clean test -Pintegration-tests
+```
+
+This is also the profile to use in CI environments that provide Docker:
+
+```bash
+mvn verify -Pintegration-tests
 ```
 
 ### Verify Migration
