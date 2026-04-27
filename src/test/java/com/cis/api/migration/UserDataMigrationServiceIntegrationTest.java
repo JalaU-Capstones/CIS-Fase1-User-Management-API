@@ -12,9 +12,10 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.containers.MongoDBContainer;
 import org.testcontainers.containers.MySQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
+
+import com.mongodb.client.MongoClient;
 
 import java.util.UUID;
 
@@ -30,17 +31,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest
 @ActiveProfiles("test")
 @Testcontainers
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class UserDataMigrationServiceIntegrationTest {
 
-    @Container
     static final MongoDBContainer mongoDBContainer = new MongoDBContainer(DockerImageName.parse("mongo:6.0"));
 
-    @Container
     static final MySQLContainer<?> mysqlContainer = new MySQLContainer<>(DockerImageName.parse("mysql:8.0"))
             .withDatabaseName("sd3")
             .withUsername("sd3user")
             .withPassword("sd3pass")
             .withInitScript("init.sql");
+
+    static {
+        mysqlContainer.start();
+        mongoDBContainer.start();
+    }
 
     @DynamicPropertySource
     static void setProperties(DynamicPropertyRegistry registry) {
@@ -61,6 +66,9 @@ class UserDataMigrationServiceIntegrationTest {
 
     @Autowired
     private MongoUserSpringRepository mongoUserRepository;
+
+    @Autowired
+    private MongoClient mongoClient;
 
     private User testUser;
 
@@ -87,6 +95,13 @@ class UserDataMigrationServiceIntegrationTest {
             // Test cleanup should not fail the suite.
         }
         mongoUserRepository.deleteAll();
+    }
+
+    @AfterAll
+    void shutdownSpringMongoClientBeforeContainersStop() {
+        mongoClient.close();
+        mongoDBContainer.stop();
+        mysqlContainer.stop();
     }
 
     @Test

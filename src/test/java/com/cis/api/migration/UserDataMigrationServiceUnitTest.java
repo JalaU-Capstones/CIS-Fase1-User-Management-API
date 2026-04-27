@@ -13,7 +13,6 @@ import org.springframework.dao.DataAccessException;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -71,6 +70,21 @@ class UserDataMigrationServiceUnitTest {
         assertThat(result.totalFound).isEqualTo(1);
         assertThat(result.successCount).isZero();
         verify(mongoUserRepository, never()).save(any());
+    }
+
+    @Test
+    void testMigrateUsers_DryRunWithCleanFlag_ShouldNotDeleteMongoData() {
+        // Given
+        when(mysqlUserRepository.findAll()).thenReturn(List.of(testUser));
+
+        // When
+        var result = migrationService.migrateUsers(true, true);
+
+        // Then
+        assertThat(result.totalFound).isEqualTo(1);
+        assertThat(result.cleanedCount).isZero();
+        verify(mongoUserRepository, never()).deleteAll();
+        verify(mongoUserRepository, never()).count();
     }
 
     @Test
@@ -137,6 +151,20 @@ class UserDataMigrationServiceUnitTest {
     }
 
     @Test
+    void testMigrateUsers_WhenMySQLReturnsNull_ShouldHandleGracefully() {
+        // Given
+        when(mysqlUserRepository.findAll()).thenReturn(null);
+
+        // When
+        var result = migrationService.migrateUsers(false, false);
+
+        // Then
+        assertThat(result.hasErrors()).isTrue();
+        assertThat(result.errors).hasSize(1);
+        assertThat(result.errors.get(0)).contains("mysqlUsers");
+    }
+
+    @Test
     void testMigrateUsers_WhenSaveFails_ShouldIncrementFailCount() {
         // Given
         List<User> users = List.of(testUser);
@@ -174,6 +202,38 @@ class UserDataMigrationServiceUnitTest {
         assertThat(result.totalFound).isEqualTo(1);
     }
 
+    @Test
+    void testMigrateUsers_WithCleanFlagAndEmptyMongo_ShouldTrackZeroCleanedUsers() {
+        // Given
+        when(mysqlUserRepository.findAll()).thenReturn(List.of(testUser));
+        when(mongoUserRepository.existsById(testUser.getId().toString())).thenReturn(false);
+        when(mongoUserRepository.existsByLogin(testUser.getLogin())).thenReturn(false);
+        when(mongoUserRepository.count()).thenReturn(0L, 1L);
+
+        // When
+        var result = migrationService.migrateUsers(false, true);
+
+        // Then
+        assertThat(result.cleanedCount).isZero();
+        assertThat(result.successCount).isEqualTo(1);
+        verify(mongoUserRepository).deleteAll();
+    }
+
+    @Test
+    void testMigrateUsers_WhenDeleteAllFails_ShouldHandleGracefully() {
+        // Given
+        when(mongoUserRepository.count()).thenReturn(2L);
+        doThrow(new RuntimeException("Delete failed")).when(mongoUserRepository).deleteAll();
+
+        // When
+        var result = migrationService.migrateUsers(false, true);
+
+        // Then
+        assertThat(result.hasErrors()).isTrue();
+        assertThat(result.errors).containsExactly("Delete failed");
+        verify(mysqlUserRepository, never()).findAll();
+    }
+
 
     @Test
     void testMigrateUsers_MultipleUsers_ShouldProcessAll() {
@@ -197,5 +257,25 @@ class UserDataMigrationServiceUnitTest {
         assertThat(result.successCount).isEqualTo(2);
         assertThat(result.totalFound).isEqualTo(2);
         verify(mongoUserRepository, times(2)).save(any());
+    }
+
+    @Test
+    void testMigrationResult_GetSummaryAndHasErrors_ShouldReflectState() {
+        var result = new UserDataMigrationService.MigrationResult();
+        result.totalFound = 4;
+        result.successCount = 2;
+        result.failCount = 1;
+        result.skippedCount = 1;
+        result.cleanedCount = 3;
+        result.finalCount = 2;
+
+        assertThat(result.hasErrors()).isFalse();
+        assertThat(result.getSummary()).isEqualTo(
+                "Migration Summary: Total=4, Success=2, Failed=1, Skipped=1, Cleaned=3, Final=2"
+        );
+
+        result.errors.add("boom");
+
+        assertThat(result.hasErrors()).isTrue();
     }
 }
