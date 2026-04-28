@@ -5,6 +5,7 @@ import com.cis.api.dto.AuthResponse;
 import com.cis.api.repository.MongoPersistencePort;
 import com.cis.api.security.JwtService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -13,6 +14,7 @@ import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 
+@Profile("!migrate")
 @Service
 @RequiredArgsConstructor
 public class MongoAuthenticationService {

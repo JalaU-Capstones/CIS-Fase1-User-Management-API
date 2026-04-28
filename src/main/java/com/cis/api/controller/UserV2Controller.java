@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,6 +24,7 @@ import java.util.List;
 /**
  * Controller for user management V2 (MongoDB).
  */
+@Profile("!migrate")
 @Tag(name = "Users V2", description = "Operations related to user management using MongoDB")
 @RestController
 @RequestMapping("/api/v2/users")

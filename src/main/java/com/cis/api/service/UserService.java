@@ -7,6 +7,7 @@ import com.cis.api.exception.ResourceNotFoundException;
 import com.cis.api.model.User;
 import com.cis.api.repository.UserPersistencePort;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.UUID;
 
+@Profile("!migrate")
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
