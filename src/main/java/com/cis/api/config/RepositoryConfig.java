@@ -9,6 +9,7 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
 @Configuration
+@ConditionalOnProperty(prefix = "app.fallback", name = "enabled", havingValue = "false")
 public class RepositoryConfig {
 
     @Bean
@@ -19,6 +20,7 @@ public class RepositoryConfig {
     }
 
     @Bean
+    @Primary
     @ConditionalOnProperty(name = "db.type", havingValue = "mongo")
     public UserPersistencePort mongoUserPersistencePort(MongoPersistencePort mongoAdapter) {
         return mongoAdapter;

@@ -19,7 +19,9 @@ class CisUserManagementApiPhase1ApplicationTests {
 
     @Test
     void main() {
-        assertThatCode(() -> CisUserManagementApiPhase1Application.main(new String[]{}))
+        // Use an ephemeral port so the test does not fail when 8080 is already bound
+        // (e.g. developer running the API locally while executing tests).
+        assertThatCode(() -> CisUserManagementApiPhase1Application.main(new String[]{"--server.port=0"}))
                 .doesNotThrowAnyException();
     }
 

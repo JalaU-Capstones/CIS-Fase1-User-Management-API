@@ -21,7 +21,6 @@ import java.util.UUID;
 @Profile("!migrate")
 @Service
 @RequiredArgsConstructor
-@Transactional(readOnly = true)
 public class UserService {
 
     private final UserPersistencePort userPersistencePort;
