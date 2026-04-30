@@ -23,8 +23,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @Profile("!migrate")
 public class SecurityConfig {
 
-    private final JwtAuthenticationFilter jwtAuthFilter;
-    private final AuthenticationProvider authenticationProvider;
+    private final JwtAuthenticationFilter       jwtAuthFilter;
+    private final AuthenticationProvider        authenticationProvider;
     private final CustomAuthenticationEntryPoint customAuthenticationEntryPoint;
 
     private static final String[] PUBLIC_ENDPOINTS = {
@@ -32,7 +32,8 @@ public class SecurityConfig {
             "/api/v2/auth/login",
             "/v3/api-docs/**",
             "/swagger-ui/**",
-            "/swagger-ui.html"
+            "/swagger-ui.html",
+            "/api/v1/system/**"
     };
 
     @Bean
