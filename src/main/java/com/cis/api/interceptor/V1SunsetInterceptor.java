@@ -13,9 +13,7 @@ import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.HandlerInterceptor;
 
-import java.util.LinkedHashMap;
 import java.util.Map;
-
 
 @Slf4j
 @Component
@@ -26,6 +24,16 @@ public class V1SunsetInterceptor implements HandlerInterceptor {
     static final String WARNING_HEADER_NAME  = "Warning";
     static final String WARNING_HEADER_VALUE = "299 - \"API v1 is deprecated. Please migrate to /api/v2/\"";
 
+    private static final Map<String, Object> MAINTENANCE_BODY = Map.of(
+            "error", "Service is under maintenance. Write operations are temporarily disabled. Please try again shortly."
+    );
+
+    private static final Map<String, Object> SUNSET_BODY = Map.of(
+            "status", 410,
+            "error", "Gone",
+            "message", "API v1 has been sunset. Please migrate to /api/v2/"
+    );
+
     private final SystemStateConfig systemStateConfig;
     private final ObjectMapper      objectMapper;
 
@@ -34,28 +42,38 @@ public class V1SunsetInterceptor implements HandlerInterceptor {
                              HttpServletResponse response,
                              Object              handler) throws Exception {
 
-        if (!systemStateConfig.isV1Sunset()) {
+        boolean migrationRunning = systemStateConfig.isMigrationRunning();
+        boolean sunset           = systemStateConfig.isV1Sunset();
+        String  method           = request.getMethod();
+        String  path             = request.getRequestURI();
+        boolean isV1             = path.startsWith("/api/v1/") || path.equals("/api/v1");
+
+        if (migrationRunning) {
+            if (!HttpMethod.GET.matches(method)) {
+                log.warn("Migration running — blocking {} {} with 503 Service Unavailable",
+                        method, path);
+                response.setStatus(HttpStatus.SERVICE_UNAVAILABLE.value());
+                response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+                objectMapper.writeValue(response.getWriter(), MAINTENANCE_BODY);
+                return false;
+            }
             return true;
         }
 
-        String method = request.getMethod();
+        if (sunset && isV1) {
+            if (HttpMethod.GET.matches(method)) {
+                log.debug("V1 sunset active — appending deprecation Warning header for GET {}", path);
+                response.addHeader(WARNING_HEADER_NAME, WARNING_HEADER_VALUE);
+                return true;
+            }
 
-        if (HttpMethod.GET.matches(method)) {
-            log.debug("V1 sunset active — appending deprecation Warning header for GET {}", request.getRequestURI());
-            response.addHeader(WARNING_HEADER_NAME, WARNING_HEADER_VALUE);
-            return true;
+            log.warn("V1 sunset active — blocking {} {} with 410 Gone", method, path);
+            response.setStatus(HttpStatus.GONE.value());
+            response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+            objectMapper.writeValue(response.getWriter(), SUNSET_BODY);
+            return false;
         }
 
-        log.warn("V1 sunset active — blocking {} {} with 410 Gone", method, request.getRequestURI());
-        response.setStatus(HttpStatus.GONE.value());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-
-        Map<String, Object> body = new LinkedHashMap<>();
-        body.put("status",  410);
-        body.put("error",   "Gone");
-        body.put("message", "API v1 has been sunset. Please migrate to /api/v2/");
-
-        objectMapper.writeValue(response.getWriter(), body);
-        return false;
+        return true;
     }
 }

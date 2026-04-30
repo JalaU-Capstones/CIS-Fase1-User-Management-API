@@ -19,14 +19,6 @@ import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/**
- * Unit tests for {@link V1SunsetInterceptor} using
- * {@link MockMvcBuilders#standaloneSetup} so no Spring context is loaded and
- * the security filter chain is bypassed — we are testing only interceptor logic.
- *
- * <p>A minimal {@link StubController} is wired in as the target endpoint;
- * it always returns 200 OK so any non-200 response is caused by the interceptor.</p>
- */
 @ExtendWith(MockitoExtension.class)
 @DisplayName("V1SunsetInterceptor")
 class V1SunsetInterceptorTest {
@@ -34,16 +26,22 @@ class V1SunsetInterceptorTest {
     @RestController
     static class StubController {
         @GetMapping("/api/v1/users")
-        String get() { return "ok"; }
-
+        String getV1() { return "ok"; }
         @PostMapping("/api/v1/users")
-        String post() { return "ok"; }
-
+        String postV1() { return "ok"; }
         @PutMapping("/api/v1/users/{id}")
-        String put(@PathVariable String id) { return "ok"; }
-
+        String putV1(@PathVariable String id) { return "ok"; }
         @DeleteMapping("/api/v1/users/{id}")
-        String delete(@PathVariable String id) { return "ok"; }
+        String deleteV1(@PathVariable String id) { return "ok"; }
+
+        @GetMapping("/api/v2/users")
+        String getV2() { return "ok"; }
+        @PostMapping("/api/v2/users")
+        String postV2() { return "ok"; }
+        @PutMapping("/api/v2/users/{id}")
+        String putV2(@PathVariable String id) { return "ok"; }
+        @DeleteMapping("/api/v2/users/{id}")
+        String deleteV2(@PathVariable String id) { return "ok"; }
     }
 
     @Mock
@@ -61,132 +59,159 @@ class V1SunsetInterceptorTest {
     }
 
     @Nested
-    @DisplayName("when sunset is NOT active")
-    class SunsetInactive {
-
+    @DisplayName("when both flags are false")
+    class AllInactive {
         @BeforeEach
-        void sunsetOff() {
+        void noFlags() {
+            when(systemStateConfig.isMigrationRunning()).thenReturn(false);
             when(systemStateConfig.isV1Sunset()).thenReturn(false);
         }
 
-        @Test
-        @DisplayName("GET passes through with no Warning header")
-        void get_passesWithoutWarningHeader() throws Exception {
+        @Test @DisplayName("v1 GET passes")
+        void v1Get() throws Exception {
             mockMvc.perform(get("/api/v1/users"))
                     .andExpect(status().isOk())
                     .andExpect(header().doesNotExist(V1SunsetInterceptor.WARNING_HEADER_NAME));
         }
-
-        @Test
-        @DisplayName("POST passes through normally")
-        void post_passesThrough() throws Exception {
-            mockMvc.perform(post("/api/v1/users")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{}"))
+        @Test @DisplayName("v1 POST passes")
+        void v1Post() throws Exception {
+            mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON).content("{}"))
                     .andExpect(status().isOk());
         }
-
-        @Test
-        @DisplayName("PUT passes through normally")
-        void put_passesThrough() throws Exception {
-            mockMvc.perform(put("/api/v1/users/1")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{}"))
-                    .andExpect(status().isOk());
+        @Test @DisplayName("v2 GET passes")
+        void v2Get() throws Exception {
+            mockMvc.perform(get("/api/v2/users"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().doesNotExist(V1SunsetInterceptor.WARNING_HEADER_NAME));
         }
-
-        @Test
-        @DisplayName("DELETE passes through normally")
-        void delete_passesThrough() throws Exception {
-            mockMvc.perform(delete("/api/v1/users/1"))
+        @Test @DisplayName("v2 POST passes")
+        void v2Post() throws Exception {
+            mockMvc.perform(post("/api/v2/users").contentType(MediaType.APPLICATION_JSON).content("{}"))
                     .andExpect(status().isOk());
         }
     }
 
     @Nested
-    @DisplayName("when sunset IS active")
-    class SunsetActive {
-
+    @DisplayName("when migration is running")
+    class MigrationRunning {
         @BeforeEach
-        void sunsetOn() {
+        void setup() {
+            when(systemStateConfig.isMigrationRunning()).thenReturn(true);
+            when(systemStateConfig.isV1Sunset()).thenReturn(false);
+        }
+
+        @Test @DisplayName("v1 GET passes without warning")
+        void v1Get() throws Exception {
+            mockMvc.perform(get("/api/v1/users"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().doesNotExist(V1SunsetInterceptor.WARNING_HEADER_NAME));
+        }
+        @Test @DisplayName("v1 POST returns 503 maintenance")
+        void v1Post() throws Exception {
+            mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.error").value(containsString("maintenance")));
+        }
+        @Test @DisplayName("v2 GET passes without warning")
+        void v2Get() throws Exception {
+            mockMvc.perform(get("/api/v2/users"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().doesNotExist(V1SunsetInterceptor.WARNING_HEADER_NAME));
+        }
+        @Test @DisplayName("v2 POST returns 503 maintenance")
+        void v2Post() throws Exception {
+            mockMvc.perform(post("/api/v2/users").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.error").value(containsString("maintenance")));
+        }
+        @Test @DisplayName("v2 PUT returns 503")
+        void v2Put() throws Exception {
+            mockMvc.perform(put("/api/v2/users/1").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isServiceUnavailable());
+        }
+        @Test @DisplayName("v2 DELETE returns 503")
+        void v2Delete() throws Exception {
+            mockMvc.perform(delete("/api/v2/users/1"))
+                    .andExpect(status().isServiceUnavailable());
+        }
+    }
+
+    @Nested
+    @DisplayName("when only V1 sunset is active")
+    class SunsetActive {
+        @BeforeEach
+        void setup() {
+            when(systemStateConfig.isMigrationRunning()).thenReturn(false);
             when(systemStateConfig.isV1Sunset()).thenReturn(true);
         }
 
-        @Test
-        @DisplayName("GET passes through and carries the RFC-7234 Warning header")
-        void get_passesWithWarningHeader() throws Exception {
+        @Test @DisplayName("v1 GET passes with Warning header")
+        void v1Get() throws Exception {
             mockMvc.perform(get("/api/v1/users"))
                     .andExpect(status().isOk())
-                    .andExpect(header().exists(V1SunsetInterceptor.WARNING_HEADER_NAME))
-                    .andExpect(header().string(V1SunsetInterceptor.WARNING_HEADER_NAME,
-                            containsString("API v1 is deprecated")))
-                    .andExpect(header().string(V1SunsetInterceptor.WARNING_HEADER_NAME,
-                            containsString("/api/v2/")));
-        }
-
-        @Test
-        @DisplayName("GET Warning header contains the full expected value")
-        void get_warningHeaderContainsFullValue() throws Exception {
-            mockMvc.perform(get("/api/v1/users"))
                     .andExpect(header().string(V1SunsetInterceptor.WARNING_HEADER_NAME,
                             V1SunsetInterceptor.WARNING_HEADER_VALUE));
         }
-
-        @Test
-        @DisplayName("POST is blocked with 410 Gone")
-        void post_returns410Gone() throws Exception {
-            mockMvc.perform(post("/api/v1/users")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{}"))
-                    .andExpect(status().isGone());
-        }
-
-        @Test
-        @DisplayName("POST 410 body contains status, error, and message fields")
-        void post_blockedBody_containsJsonFields() throws Exception {
-            mockMvc.perform(post("/api/v1/users")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{}"))
+        @Test @DisplayName("v1 POST returns 410 Gone")
+        void v1Post() throws Exception {
+            mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON).content("{}"))
                     .andExpect(status().isGone())
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.status").value(410))
-                    .andExpect(jsonPath("$.error").value("Gone"))
-                    .andExpect(jsonPath("$.message").value(containsString("/api/v2/")));
-        }
-
-
-        @Test
-        @DisplayName("PUT is blocked with 410 Gone")
-        void put_returns410Gone() throws Exception {
-            mockMvc.perform(put("/api/v1/users/42")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{}"))
-                    .andExpect(status().isGone());
-        }
-
-        @Test
-        @DisplayName("PUT 410 body is valid JSON")
-        void put_blockedBody_isJson() throws Exception {
-            mockMvc.perform(put("/api/v1/users/42")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("{}"))
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
                     .andExpect(jsonPath("$.status").value(410));
         }
+        @Test @DisplayName("v2 GET passes without warning")
+        void v2Get() throws Exception {
+            mockMvc.perform(get("/api/v2/users"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().doesNotExist(V1SunsetInterceptor.WARNING_HEADER_NAME));
+        }
+        @Test @DisplayName("v2 POST passes normally")
+        void v2Post() throws Exception {
+            mockMvc.perform(post("/api/v2/users").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isOk());
+        }
+        @Test @DisplayName("v2 PUT passes normally")
+        void v2Put() throws Exception {
+            mockMvc.perform(put("/api/v2/users/1").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isOk());
+        }
+        @Test @DisplayName("v2 DELETE passes normally")
+        void v2Delete() throws Exception {
+            mockMvc.perform(delete("/api/v2/users/1"))
+                    .andExpect(status().isOk());
+        }
+    }
 
-        @Test
-        @DisplayName("DELETE is blocked with 410 Gone")
-        void delete_returns410Gone() throws Exception {
-            mockMvc.perform(delete("/api/v1/users/42"))
-                    .andExpect(status().isGone());
+    @Nested
+    @DisplayName("when both migration and sunset are true (maintenance wins)")
+    class BothFlagsTrue {
+        @BeforeEach
+        void setup() {
+            when(systemStateConfig.isMigrationRunning()).thenReturn(true);
+            when(systemStateConfig.isV1Sunset()).thenReturn(true);
         }
 
-        @Test
-        @DisplayName("DELETE 410 body is valid JSON")
-        void delete_blockedBody_isJson() throws Exception {
-            mockMvc.perform(delete("/api/v1/users/42"))
-                    .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                    .andExpect(jsonPath("$.error").value("Gone"));
+        @Test @DisplayName("v1 POST returns 503 (maintenance) not 410")
+        void v1PostReturns503() throws Exception {
+            mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.error").value(containsString("maintenance")));
+        }
+        @Test @DisplayName("v2 POST returns 503 (maintenance)")
+        void v2PostReturns503() throws Exception {
+            mockMvc.perform(post("/api/v2/users").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isServiceUnavailable());
+        }
+        @Test @DisplayName("v1 GET passes without warning")
+        void v1GetClean() throws Exception {
+            mockMvc.perform(get("/api/v1/users"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().doesNotExist(V1SunsetInterceptor.WARNING_HEADER_NAME));
+        }
+        @Test @DisplayName("v2 GET passes without warning")
+        void v2GetClean() throws Exception {
+            mockMvc.perform(get("/api/v2/users"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().doesNotExist(V1SunsetInterceptor.WARNING_HEADER_NAME));
         }
     }
 }

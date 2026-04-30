@@ -7,7 +7,6 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-
 @Configuration
 @Profile("!migrate & !test")
 public class WebMvcConfig implements WebMvcConfigurer {
@@ -20,10 +19,10 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        interceptorProvider.ifAvailable(interceptor ->
-                registry.addInterceptor(interceptor)
-                        .addPathPatterns("/api/v1/**")
-                        .excludePathPatterns("/api/v1/system/**")
-        );
+        interceptorProvider.ifAvailable(interceptor -> {
+            registry.addInterceptor(interceptor)
+                    .addPathPatterns("/api/v1/**", "/api/v2/**")
+                    .excludePathPatterns("/api/v1/system/**", "/api/v2/system/**");
+        });
     }
 }

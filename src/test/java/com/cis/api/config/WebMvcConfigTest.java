@@ -13,14 +13,6 @@ import java.util.function.Consumer;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-/**
- * Tests for {@link WebMvcConfig}.
- *
- * We construct {@link WebMvcConfig} directly (no Spring context) and supply
- * hand-crafted {@link ObjectProvider} doubles so we can test both branches:
- * interceptor present (full application context) and interceptor absent
- * (@WebMvcTest slice context).
- */
 @DisplayName("WebMvcConfig")
 class WebMvcConfigTest {
 
@@ -37,7 +29,7 @@ class WebMvcConfigTest {
     @SuppressWarnings("unchecked")
     private static ObjectProvider<V1SunsetInterceptor> absentProvider() {
         ObjectProvider<V1SunsetInterceptor> provider = mock(ObjectProvider.class);
-        doNothing().when(provider).ifAvailable(any()); // no-op
+        doNothing().when(provider).ifAvailable(any());
         return provider;
     }
 
@@ -46,21 +38,21 @@ class WebMvcConfigTest {
     class BeanPresent {
 
         @Test
-        @DisplayName("registers interceptor for /api/v1/** and excludes /api/v1/system/**")
+        @DisplayName("registers interceptor for /api/v1/**, /api/v2/** and excludes system paths")
         void registersInterceptorWithCorrectPaths() {
             V1SunsetInterceptor     interceptor  = mock(V1SunsetInterceptor.class);
             InterceptorRegistry     registry     = mock(InterceptorRegistry.class);
             InterceptorRegistration registration = mock(InterceptorRegistration.class);
 
             when(registry.addInterceptor(interceptor)).thenReturn(registration);
-            when(registration.addPathPatterns(any(String.class))).thenReturn(registration);
-            when(registration.excludePathPatterns(any(String.class))).thenReturn(registration);
+            when(registration.addPathPatterns(any(String[].class))).thenReturn(registration);
+            when(registration.excludePathPatterns(any(String[].class))).thenReturn(registration);
 
             new WebMvcConfig(presentProvider(interceptor)).addInterceptors(registry);
 
             verify(registry).addInterceptor(interceptor);
-            verify(registration).addPathPatterns("/api/v1/**");
-            verify(registration).excludePathPatterns("/api/v1/system/**");
+            verify(registration).addPathPatterns("/api/v1/**", "/api/v2/**");
+            verify(registration).excludePathPatterns("/api/v1/system/**", "/api/v2/system/**");
         }
 
         @Test
@@ -71,8 +63,8 @@ class WebMvcConfigTest {
             InterceptorRegistration registration = mock(InterceptorRegistration.class);
 
             when(registry.addInterceptor(interceptor)).thenReturn(registration);
-            when(registration.addPathPatterns(any(String.class))).thenReturn(registration);
-            when(registration.excludePathPatterns(any(String.class))).thenReturn(registration);
+            when(registration.addPathPatterns(any(String[].class))).thenReturn(registration);
+            when(registration.excludePathPatterns(any(String[].class))).thenReturn(registration);
 
             new WebMvcConfig(presentProvider(interceptor)).addInterceptors(registry);
 
