@@ -1,3 +1,4 @@
+// SystemMigrationControllerTest.java
 package com.cis.api.controller;
 
 import com.cis.api.config.SystemStateConfig;
@@ -16,16 +17,8 @@ import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/**
- * Unit tests for {@link SystemMigrationController}.
- *
- * Uses {@link MockMvcBuilders#standaloneSetup} to isolate from Spring Security.
- * The controller is constructed directly with hand-crafted {@link ObjectProvider}
- * doubles, mirroring the approach used in {@code WebMvcConfigTest}.
- */
 @DisplayName("SystemMigrationController")
 class SystemMigrationControllerTest {
-
 
     @SuppressWarnings("unchecked")
     private static <T> ObjectProvider<T> providerOf(T bean) {
@@ -41,6 +34,26 @@ class SystemMigrationControllerTest {
         return p;
     }
 
+    private MockMvc mockMvc(UserDataMigrationService service, SystemStateConfig state) {
+        return MockMvcBuilders
+                .standaloneSetup(new SystemMigrationController(providerOf(service), providerOf(state)))
+                .build();
+    }
+
+    private MockMvc mockMvcWithAbsentBeans() {
+        return MockMvcBuilders
+                .standaloneSetup(new SystemMigrationController(emptyProvider(), emptyProvider()))
+                .build();
+    }
+
+    private MigrationResult buildResult(int total, int success, int fail, int skipped) {
+        MigrationResult r = new MigrationResult();
+        r.totalFound   = total;
+        r.successCount = success;
+        r.failCount    = fail;
+        r.skippedCount = skipped;
+        return r;
+    }
 
     @Nested
     @DisplayName("POST /api/v1/system/migrate")
@@ -155,14 +168,15 @@ class SystemMigrationControllerTest {
         }
 
         @Test
-        @DisplayName("sets isV1Sunset flag to true")
-        void setsSunsetFlagTrue() throws Exception {
+        @DisplayName("sets isV1Sunset flag to true and stops maintenance")
+        void setsSunsetAndStopsMaintenance() throws Exception {
             SystemStateConfig state = mock(SystemStateConfig.class);
 
             mockMvc(mock(UserDataMigrationService.class), state)
                     .perform(post("/api/v1/system/sunset"))
                     .andExpect(status().isOk());
 
+            verify(state).setMigrationRunning(false);
             verify(state).setV1Sunset(true);
             verifyNoMoreInteractions(state);
         }
@@ -188,7 +202,7 @@ class SystemMigrationControllerTest {
         }
 
         @Test
-        @DisplayName("idempotent — second call still delegates setV1Sunset(true)")
+        @DisplayName("idempotent — second call still delegates setV1Sunset(true) and stops maintenance")
         void idempotent_secondCallStillSetsFlag() throws Exception {
             SystemStateConfig state = mock(SystemStateConfig.class);
             MockMvc mvc = mockMvc(mock(UserDataMigrationService.class), state);
@@ -196,6 +210,7 @@ class SystemMigrationControllerTest {
             mvc.perform(post("/api/v1/system/sunset")).andExpect(status().isOk());
             mvc.perform(post("/api/v1/system/sunset")).andExpect(status().isOk());
 
+            verify(state, times(2)).setMigrationRunning(false);
             verify(state, times(2)).setV1Sunset(true);
         }
 
@@ -208,24 +223,51 @@ class SystemMigrationControllerTest {
         }
     }
 
-    private MockMvc mockMvc(UserDataMigrationService service, SystemStateConfig state) {
-        return MockMvcBuilders
-                .standaloneSetup(new SystemMigrationController(providerOf(service), providerOf(state)))
-                .build();
+    @Nested
+    @DisplayName("POST /api/v1/system/maintenance/start")
+    class MaintenanceStart {
+
+        @Test
+        @DisplayName("sets isMigrationRunning to true and returns 200")
+        void setsFlagAndReturns200() throws Exception {
+            SystemStateConfig state = mock(SystemStateConfig.class);
+            mockMvc(mock(UserDataMigrationService.class), state)
+                    .perform(post("/api/v1/system/maintenance/start"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString("activated")));
+            verify(state).setMigrationRunning(true);
+        }
+
+        @Test
+        @DisplayName("service unavailable when SystemStateConfig absent")
+        void absentState_returns503() throws Exception {
+            mockMvcWithAbsentBeans()
+                    .perform(post("/api/v1/system/maintenance/start"))
+                    .andExpect(status().isServiceUnavailable());
+        }
     }
 
-    private MockMvc mockMvcWithAbsentBeans() {
-        return MockMvcBuilders
-                .standaloneSetup(new SystemMigrationController(emptyProvider(), emptyProvider()))
-                .build();
-    }
+    @Nested
+    @DisplayName("POST /api/v1/system/maintenance/stop")
+    class MaintenanceStop {
 
-    private MigrationResult buildResult(int total, int success, int fail, int skipped) {
-        MigrationResult r = new MigrationResult();
-        r.totalFound   = total;
-        r.successCount = success;
-        r.failCount    = fail;
-        r.skippedCount = skipped;
-        return r;
+        @Test
+        @DisplayName("sets isMigrationRunning to false and returns 200")
+        void clearsFlagAndReturns200() throws Exception {
+            SystemStateConfig state = mock(SystemStateConfig.class);
+            mockMvc(mock(UserDataMigrationService.class), state)
+                    .perform(post("/api/v1/system/maintenance/stop"))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(containsString("deactivated")));
+            verify(state).setMigrationRunning(false);
+        }
+
+        @Test
+        @DisplayName("service unavailable when SystemStateConfig absent")
+        void absentState_returns503() throws Exception {
+            mockMvcWithAbsentBeans()
+                    .perform(post("/api/v1/system/maintenance/stop"))
+                    .andExpect(status().isServiceUnavailable());
+        }
     }
 }

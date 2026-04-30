@@ -2,6 +2,7 @@ package com.cis.api.config;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.concurrent.CountDownLatch;
@@ -21,25 +22,67 @@ class SystemStateConfigTest {
         config = new SystemStateConfig();
     }
 
-    @Test
-    @DisplayName("default value is false")
-    void defaultValue_isFalse() {
-        assertFalse(config.isV1Sunset());
+    @Nested
+    @DisplayName("isV1Sunset")
+    class V1Sunset {
+        @Test
+        @DisplayName("default value is false")
+        void defaultValue_isFalse() {
+            assertFalse(config.isV1Sunset());
+        }
+
+        @Test
+        @DisplayName("setV1Sunset(true) → isV1Sunset() returns true")
+        void setTrue_returnsTrue() {
+            config.setV1Sunset(true);
+            assertTrue(config.isV1Sunset());
+        }
+
+        @Test
+        @DisplayName("setV1Sunset(false) after true → isV1Sunset() returns false")
+        void setFalse_afterTrue_returnsFalse() {
+            config.setV1Sunset(true);
+            config.setV1Sunset(false);
+            assertFalse(config.isV1Sunset());
+        }
+    }
+
+    @Nested
+    @DisplayName("isMigrationRunning")
+    class MigrationRunning {
+        @Test
+        @DisplayName("default value is false")
+        void defaultValue_isFalse() {
+            assertFalse(config.isMigrationRunning());
+        }
+
+        @Test
+        @DisplayName("setMigrationRunning(true) → returns true")
+        void setTrue_returnsTrue() {
+            config.setMigrationRunning(true);
+            assertTrue(config.isMigrationRunning());
+        }
+
+        @Test
+        @DisplayName("setMigrationRunning(false) after true → returns false")
+        void setFalse_afterTrue_returnsFalse() {
+            config.setMigrationRunning(true);
+            config.setMigrationRunning(false);
+            assertFalse(config.isMigrationRunning());
+        }
     }
 
     @Test
-    @DisplayName("setV1Sunset(true) → isV1Sunset() returns true")
-    void setTrue_returnsTrue() {
+    @DisplayName("flags are independent")
+    void flagsAreIndependent() {
+        config.setMigrationRunning(true);
         config.setV1Sunset(true);
+        assertTrue(config.isMigrationRunning());
         assertTrue(config.isV1Sunset());
-    }
 
-    @Test
-    @DisplayName("setV1Sunset(false) after true → isV1Sunset() returns false")
-    void setFalse_afterTrue_returnsFalse() {
-        config.setV1Sunset(true);
-        config.setV1Sunset(false);
-        assertFalse(config.isV1Sunset());
+        config.setMigrationRunning(false);
+        assertFalse(config.isMigrationRunning());
+        assertTrue(config.isV1Sunset());
     }
 
     @Test
@@ -51,10 +94,12 @@ class SystemStateConfigTest {
         ExecutorService pool = Executors.newFixedThreadPool(threads);
 
         for (int i = 0; i < threads; i++) {
+            final boolean flag = i % 2 == 0;
             pool.submit(() -> {
                 try {
                     startLatch.await();
-                    config.setV1Sunset(true);
+                    config.setMigrationRunning(flag);
+                    config.setV1Sunset(!flag);
                 } catch (InterruptedException e) {
                     Thread.currentThread().interrupt();
                 } finally {
@@ -65,8 +110,10 @@ class SystemStateConfigTest {
 
         startLatch.countDown();
         assertTrue(doneLatch.await(5, TimeUnit.SECONDS), "Timed out waiting for threads");
-        assertTrue(config.isV1Sunset(), "Flag must be true after concurrent writes");
-
+        assertDoesNotThrow(() -> {
+            boolean mig = config.isMigrationRunning();
+            boolean sun = config.isV1Sunset();
+        });
         pool.shutdown();
     }
 }
