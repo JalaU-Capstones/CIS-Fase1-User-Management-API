@@ -214,4 +214,84 @@ class V1SunsetInterceptorTest {
                     .andExpect(header().doesNotExist(V1SunsetInterceptor.WARNING_HEADER_NAME));
         }
     }
+
+    @Nested
+    @DisplayName("when flags are toggled at runtime")
+    class WhenFlagsAreToggledAtRuntime {
+
+        @Test
+        @DisplayName("should reflect changes in migrationRunning flag for v2 POST")
+        void toggleMigrationRunningForV2Post() throws Exception {
+            // Initially, migration is OFF
+            when(systemStateConfig.isMigrationRunning()).thenReturn(false);
+            when(systemStateConfig.isV1Sunset()).thenReturn(false);
+
+            mockMvc.perform(post("/api/v2/users").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isOk());
+
+            // Toggle migration ON
+            when(systemStateConfig.isMigrationRunning()).thenReturn(true);
+
+            mockMvc.perform(post("/api/v2/users").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isServiceUnavailable())
+                    .andExpect(jsonPath("$.error").value(containsString("maintenance")));
+
+            // Toggle migration OFF again
+            when(systemStateConfig.isMigrationRunning()).thenReturn(false);
+
+            mockMvc.perform(post("/api/v2/users").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("should reflect changes in v1Sunset flag for v1 POST")
+        void toggleV1SunsetForV1Post() throws Exception {
+            // Initially, sunset is OFF
+            when(systemStateConfig.isMigrationRunning()).thenReturn(false);
+            when(systemStateConfig.isV1Sunset()).thenReturn(false);
+
+            mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isOk());
+
+            // Toggle sunset ON
+            when(systemStateConfig.isV1Sunset()).thenReturn(true);
+
+            mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isGone())
+                    .andExpect(jsonPath("$.status").value(410));
+
+            // Toggle sunset OFF again
+            when(systemStateConfig.isV1Sunset()).thenReturn(false);
+
+            mockMvc.perform(post("/api/v1/users").contentType(MediaType.APPLICATION_JSON).content("{}"))
+                    .andExpect(status().isOk());
+        }
+
+        @Test
+        @DisplayName("should reflect changes in v1Sunset flag for v1 GET warning header")
+        void toggleV1SunsetForV1GetWarning() throws Exception {
+            // Initially, sunset is OFF
+            when(systemStateConfig.isMigrationRunning()).thenReturn(false);
+            when(systemStateConfig.isV1Sunset()).thenReturn(false);
+
+            mockMvc.perform(get("/api/v1/users"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().doesNotExist(V1SunsetInterceptor.WARNING_HEADER_NAME));
+
+            // Toggle sunset ON
+            when(systemStateConfig.isV1Sunset()).thenReturn(true);
+
+            mockMvc.perform(get("/api/v1/users"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().string(V1SunsetInterceptor.WARNING_HEADER_NAME,
+                            V1SunsetInterceptor.WARNING_HEADER_VALUE));
+
+            // Toggle sunset OFF again
+            when(systemStateConfig.isV1Sunset()).thenReturn(false);
+
+            mockMvc.perform(get("/api/v1/users"))
+                    .andExpect(status().isOk())
+                    .andExpect(header().doesNotExist(V1SunsetInterceptor.WARNING_HEADER_NAME));
+        }
+    }
 }

@@ -1,5 +1,6 @@
 package com.cis.api.config;
 
+import com.cis.api.console.ConsoleCommandListener;
 import org.springframework.boot.CommandLineRunner;
 import org.springframework.context.annotation.Profile;
 import org.springframework.stereotype.Component;
@@ -9,9 +10,11 @@ import org.springframework.stereotype.Component;
 public class MigrationStateInitializer implements CommandLineRunner {
 
     private final SystemStateConfig systemStateConfig;
+    private final ConsoleCommandListener consoleCommandListener;
 
-    public MigrationStateInitializer(SystemStateConfig systemStateConfig) {
+    public MigrationStateInitializer(SystemStateConfig systemStateConfig, ConsoleCommandListener consoleCommandListener) {
         this.systemStateConfig = systemStateConfig;
+        this.consoleCommandListener = consoleCommandListener;
     }
 
     @Override
@@ -25,5 +28,8 @@ public class MigrationStateInitializer implements CommandLineRunner {
         if (sunset != null) {
             systemStateConfig.setV1Sunset(Boolean.parseBoolean(sunset));
         }
+
+        // Start console listener thread
+        consoleCommandListener.start();
     }
 }

@@ -323,7 +323,67 @@ mvn spring-boot:run -Dspring-boot.run.profiles=migrate -Dspring-boot.run.argumen
 
 ---
 
-## 6. Stopping the Environment
+## 6. Controlling Maintenance and Sunset Flags
+
+The API provides mechanisms to control migration maintenance and v1 sunset flags both at startup and at runtime.
+
+### Initializing Flags at Startup
+
+You can set the initial state of the flags when starting the API using system properties:
+
+```bash
+# Start with migration maintenance mode enabled
+mvn spring-boot:run -Dmigration.maintenance=true
+
+# Start with v1 sunset mode enabled
+mvn spring-boot:run -Dsunset.v1=true
+
+# Combine both
+mvn spring-boot:run -Dmigration.maintenance=true -Dsunset.v1=true
+```
+
+### Toggling Flags at Runtime via Console
+
+When running the API from a terminal, you can interact with it using console commands to dynamically change the flag states without restarting the application. This console input is only available when running directly from the terminal (e.g., `mvn spring-boot:run`) and not when deployed as a service. It can be explicitly disabled by passing `-Dconsole.input.disabled=true` at startup.
+
+**Available Commands:**
+
+-   `maintenance on`  → Enables migration maintenance mode. Write operations on both v1 and v2 will return 503.
+-   `maintenance off` → Disables migration maintenance mode. Write operations are restored for v2 (and v1 if not sunset).
+-   `sunset on`       → Enables v1 sunset mode. v1 writes will return 410, v1 reads include a warning header.
+-   `sunset off`      → Disables v1 sunset mode. v1 writes and reads behave normally (unless maintenance mode is on).
+-   `status`          → Prints the current state of `migrationRunning` and `v1Sunset` flags.
+-   `help`            → Displays a list of available commands.
+-   `exit` or `quit`  → Initiates a graceful shutdown of the console listener.
+
+**Example Console Interaction:**
+
+```
+> status
+Migration running: false, V1 sunset: false
+> maintenance on
+Maintenance mode enabled. Write operations on both v1 and v2 will return 503.
+> status
+Migration running: true, V1 sunset: false
+> sunset on
+V1 sunset mode enabled. v1 writes will return 410, v1 reads include warning header.
+> status
+Migration running: true, V1 sunset: true
+> maintenance off
+Maintenance mode disabled. Write operations restored for v2 (and v1 if not sunset). (v1 writes remain blocked because sunset is true)
+> status
+Migration running: false, V1 sunset: true
+> exit
+Shutting down...
+```
+
+### Expected HTTP Behavior with Flags
+
+The behavior of the API endpoints changes based on the combination of these flags. Refer to the existing "Emergency Database Fallback" and "Maintenance Mode for Writes" sections for details on HTTP status codes and messages. These flags can now be changed dynamically at runtime.
+
+---
+
+## 7. Stopping the Environment
 
 ```bash
 # Stop API
