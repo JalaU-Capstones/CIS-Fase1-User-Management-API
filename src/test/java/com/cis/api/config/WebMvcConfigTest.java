@@ -1,5 +1,6 @@
 package com.cis.api.config;
-
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
 import com.cis.api.interceptor.V1SunsetInterceptor;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -9,9 +10,6 @@ import org.springframework.web.servlet.config.annotation.InterceptorRegistration
 import org.springframework.web.servlet.config.annotation.InterceptorRegistry;
 
 import java.util.function.Consumer;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
 
 @DisplayName("WebMvcConfig")
 class WebMvcConfigTest {
@@ -38,7 +36,7 @@ class WebMvcConfigTest {
     class BeanPresent {
 
         @Test
-        @DisplayName("registers interceptor for /api/v1/**, /api/v2/** and excludes system paths")
+        @DisplayName("registers interceptor for /api/v1/** and /api/v2/**")
         void registersInterceptorWithCorrectPaths() {
             V1SunsetInterceptor     interceptor  = mock(V1SunsetInterceptor.class);
             InterceptorRegistry     registry     = mock(InterceptorRegistry.class);
@@ -46,13 +44,12 @@ class WebMvcConfigTest {
 
             when(registry.addInterceptor(interceptor)).thenReturn(registration);
             when(registration.addPathPatterns(any(String[].class))).thenReturn(registration);
-            when(registration.excludePathPatterns(any(String[].class))).thenReturn(registration);
 
             new WebMvcConfig(presentProvider(interceptor)).addInterceptors(registry);
 
             verify(registry).addInterceptor(interceptor);
             verify(registration).addPathPatterns("/api/v1/**", "/api/v2/**");
-            verify(registration).excludePathPatterns("/api/v1/system/**", "/api/v2/system/**");
+            verify(registration, never()).excludePathPatterns(any(String[].class));
         }
 
         @Test
@@ -64,7 +61,6 @@ class WebMvcConfigTest {
 
             when(registry.addInterceptor(interceptor)).thenReturn(registration);
             when(registration.addPathPatterns(any(String[].class))).thenReturn(registration);
-            when(registration.excludePathPatterns(any(String[].class))).thenReturn(registration);
 
             new WebMvcConfig(presentProvider(interceptor)).addInterceptors(registry);
 

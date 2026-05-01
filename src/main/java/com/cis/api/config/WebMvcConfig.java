@@ -19,10 +19,9 @@ public class WebMvcConfig implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        interceptorProvider.ifAvailable(interceptor -> {
-            registry.addInterceptor(interceptor)
-                    .addPathPatterns("/api/v1/**", "/api/v2/**")
-                    .excludePathPatterns("/api/v1/system/**", "/api/v2/system/**");
-        });
+        interceptorProvider.ifAvailable(interceptor ->
+                registry.addInterceptor(interceptor)
+                        .addPathPatterns("/api/v1/**", "/api/v2/**")
+        );
     }
 }
