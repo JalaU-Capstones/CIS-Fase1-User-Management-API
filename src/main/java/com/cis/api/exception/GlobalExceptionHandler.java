@@ -1,5 +1,6 @@
 package com.cis.api.exception;
 
+import com.cis.api.fallback.BothDatabasesDownException;
 import io.jsonwebtoken.ExpiredJwtException;
 import io.jsonwebtoken.MalformedJwtException;
 import io.jsonwebtoken.UnsupportedJwtException;
@@ -19,6 +20,9 @@ import java.util.Map;
 @Profile("!migrate")
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+
+    private static final String OUTAGE_MESSAGE =
+            "Please try again later. Our maintenance team is working to resolve this issue.";
 
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException ex) {
@@ -73,6 +77,11 @@ public class GlobalExceptionHandler {
                 .message("Invalid or expired token")
                 .build();
         return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(BothDatabasesDownException.class)
+    public ResponseEntity<String> handleBothDatabasesDown(BothDatabasesDownException ex) {
+        return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE).body(OUTAGE_MESSAGE);
     }
 
     @ExceptionHandler(Exception.class)

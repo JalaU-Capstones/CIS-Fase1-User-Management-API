@@ -3,8 +3,9 @@ package com.cis.api.service;
 import com.cis.api.dto.UserRequestDto;
 import com.cis.api.dto.UserResponseDto;
 import com.cis.api.exception.ResourceNotFoundException;
+import com.cis.api.fallback.DatabaseFallbackService;
 import com.cis.api.model.User;
-import com.cis.api.repository.MongoPersistencePort;
+import com.cis.api.repository.UserPersistencePort;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -12,6 +13,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContext;
@@ -41,13 +43,16 @@ import static org.mockito.Mockito.verifyNoInteractions;
 class MongoUserServiceTest {
 
     @Mock
-    private MongoPersistencePort mongoPersistencePort;
+    private UserPersistencePort userPersistencePort;
 
     @Mock
     private PasswordEncoder passwordEncoder;
 
     @Mock
     private MongoTemplate mongoTemplate;
+
+    @Mock
+    private ObjectProvider<DatabaseFallbackService> databaseFallbackServiceProvider;
 
     @InjectMocks
     private MongoUserService mongoUserService;
@@ -75,19 +80,19 @@ class MongoUserServiceTest {
     @Test
     void shouldReturnListOfUsersAsDtos() {
         User user = new User(UUID.randomUUID(), "Mongo User", "mongo", "pass");
-        given(mongoPersistencePort.findAll()).willReturn(List.of(user));
+        given(userPersistencePort.findAll()).willReturn(List.of(user));
 
         List<UserResponseDto> result = mongoUserService.getAllUsers();
 
         assertThat(result).hasSize(1);
-        then(mongoPersistencePort).should().findAll();
+        then(userPersistencePort).should().findAll();
     }
 
     @Test
     void shouldGetUserById() {
         UUID id = UUID.randomUUID();
         User user = new User(id, "Mongo", "mongo", "pass");
-        given(mongoPersistencePort.findById(id)).willReturn(Optional.of(user));
+        given(userPersistencePort.findById(id)).willReturn(Optional.of(user));
 
         UserResponseDto result = mongoUserService.getUserById(id.toString());
 
@@ -97,7 +102,7 @@ class MongoUserServiceTest {
     @Test
     void shouldThrowExceptionWhenUserByIdNotFound() {
         UUID id = UUID.randomUUID();
-        given(mongoPersistencePort.findById(id)).willReturn(Optional.empty());
+        given(userPersistencePort.findById(id)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> mongoUserService.getUserById(id.toString()))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -108,9 +113,9 @@ class MongoUserServiceTest {
         UserRequestDto request = new UserRequestDto("Name", "mongo", "pass");
         User savedUser = new User(UUID.randomUUID(), "Name", "mongo", "encodedPass");
 
-        given(mongoPersistencePort.existsByLogin("mongo")).willReturn(false);
+        given(userPersistencePort.existsByLogin("mongo")).willReturn(false);
         given(passwordEncoder.encode("pass")).willReturn("encodedPass");
-        given(mongoPersistencePort.save(any(User.class))).willReturn(savedUser);
+        given(userPersistencePort.save(any(User.class))).willReturn(savedUser);
 
         UserResponseDto response = mongoUserService.createUser(request);
 
@@ -120,7 +125,7 @@ class MongoUserServiceTest {
     @Test
     void shouldThrowExceptionWhenCreatingUserWithExistingLogin() {
         UserRequestDto request = new UserRequestDto("Name", "existing", "pass");
-        given(mongoPersistencePort.existsByLogin("existing")).willReturn(true);
+        given(userPersistencePort.existsByLogin("existing")).willReturn(true);
 
         assertThatThrownBy(() -> mongoUserService.createUser(request))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -135,14 +140,14 @@ class MongoUserServiceTest {
         User updatedUser = new User(id, "New Name", "owner", "encodedNewPass");
 
         mockAuthentication("owner");
-        given(mongoPersistencePort.findById(id)).willReturn(Optional.of(user));
+        given(userPersistencePort.findById(id)).willReturn(Optional.of(user));
         given(passwordEncoder.encode("newPass")).willReturn("encodedNewPass");
-        given(mongoPersistencePort.save(any(User.class))).willReturn(updatedUser);
+        given(userPersistencePort.save(any(User.class))).willReturn(updatedUser);
 
         UserResponseDto result = mongoUserService.updateUser(id.toString(), request);
 
         assertThat(result.name()).isEqualTo("New Name");
-        then(mongoPersistencePort).should().save(any(User.class));
+        then(userPersistencePort).should().save(any(User.class));
     }
 
     @Test
@@ -153,9 +158,9 @@ class MongoUserServiceTest {
         User updatedUser = new User(id, "Name", "newLogin", "pass");
 
         mockAuthentication("oldLogin");
-        given(mongoPersistencePort.findById(id)).willReturn(Optional.of(user));
-        given(mongoPersistencePort.existsByLoginAndIdNot("newLogin", id)).willReturn(false);
-        given(mongoPersistencePort.save(any(User.class))).willReturn(updatedUser);
+        given(userPersistencePort.findById(id)).willReturn(Optional.of(user));
+        given(userPersistencePort.existsByLoginAndIdNot("newLogin", id)).willReturn(false);
+        given(userPersistencePort.save(any(User.class))).willReturn(updatedUser);
 
         UserResponseDto result = mongoUserService.updateUser(id.toString(), request);
 
@@ -169,8 +174,8 @@ class MongoUserServiceTest {
         UserRequestDto request = new UserRequestDto("Name", "takenLogin", null);
 
         mockAuthentication("oldLogin");
-        given(mongoPersistencePort.findById(id)).willReturn(Optional.of(user));
-        given(mongoPersistencePort.existsByLoginAndIdNot("takenLogin", id)).willReturn(true);
+        given(userPersistencePort.findById(id)).willReturn(Optional.of(user));
+        given(userPersistencePort.existsByLoginAndIdNot("takenLogin", id)).willReturn(true);
 
         assertThatThrownBy(() -> mongoUserService.updateUser(id.toString(), request))
                 .isInstanceOf(IllegalArgumentException.class)
@@ -181,7 +186,7 @@ class MongoUserServiceTest {
     void shouldThrowExceptionWhenUpdatingNonExistentUser() {
         UUID id = UUID.randomUUID();
         UserRequestDto request = new UserRequestDto("Name", "login", "pass");
-        given(mongoPersistencePort.findById(id)).willReturn(Optional.empty());
+        given(userPersistencePort.findById(id)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> mongoUserService.updateUser(id.toString(), request))
                 .isInstanceOf(ResourceNotFoundException.class);
@@ -194,7 +199,7 @@ class MongoUserServiceTest {
         UserRequestDto request = new UserRequestDto("New Name", "other", "pass");
 
         mockAuthentication("me");
-        given(mongoPersistencePort.findById(id)).willReturn(Optional.of(user));
+        given(userPersistencePort.findById(id)).willReturn(Optional.of(user));
 
         assertThatThrownBy(() -> mongoUserService.updateUser(id.toString(), request))
                 .isInstanceOf(AccessDeniedException.class)
@@ -211,8 +216,8 @@ class MongoUserServiceTest {
         given(userDetails.getUsername()).willReturn("user123");
         mockAuthentication(userDetails);
 
-        given(mongoPersistencePort.findById(id)).willReturn(Optional.of(user));
-        given(mongoPersistencePort.save(any(User.class))).willReturn(user);
+        given(userPersistencePort.findById(id)).willReturn(Optional.of(user));
+        given(userPersistencePort.save(any(User.class))).willReturn(user);
 
         mongoUserService.updateUser(id.toString(), request);
         
@@ -227,7 +232,10 @@ class MongoUserServiceTest {
         User user = new User(id, "Test", login, "pass");
 
         mockAuthentication(login);
-        given(mongoPersistencePort.findById(id)).willReturn(Optional.of(user));
+        given(userPersistencePort.findById(id)).willReturn(Optional.of(user));
+        DatabaseFallbackService databaseFallbackService = mock(DatabaseFallbackService.class);
+        given(databaseFallbackServiceProvider.getIfAvailable()).willReturn(databaseFallbackService);
+        given(databaseFallbackService.getActiveDatabase("v2")).willReturn(DatabaseFallbackService.DB_MONGO);
         given(mongoTemplate.findDistinct(any(Query.class), eq("_id"), eq("ideas"), eq(String.class)))
                 .willReturn(List.of("idea-1"));
 
@@ -245,18 +253,36 @@ class MongoUserServiceTest {
         inOrder.verify(mongoTemplate).remove(argThat(query ->
                 query.getQueryObject().toJson().contains("\"OwnerId\"")), eq("topics"));
         inOrder.verify(mongoTemplate).remove(any(Query.class), eq("users"));
-        then(mongoPersistencePort).should(never()).deleteUserAndRelatedData(any());
+        then(userPersistencePort).should(never()).deleteUserAndRelatedData(any());
+    }
+
+    @Test
+    void shouldUseMySqlDeletionStrategyWhenFallbackRoutesToMySql() {
+        UUID id = UUID.randomUUID();
+        String login = "owner";
+        User user = new User(id, "Test", login, "pass");
+
+        mockAuthentication(login);
+        given(userPersistencePort.findById(id)).willReturn(Optional.of(user));
+        DatabaseFallbackService databaseFallbackService = mock(DatabaseFallbackService.class);
+        given(databaseFallbackServiceProvider.getIfAvailable()).willReturn(databaseFallbackService);
+        given(databaseFallbackService.getActiveDatabase("v2")).willReturn(DatabaseFallbackService.DB_MYSQL);
+
+        mongoUserService.deleteUser(id.toString());
+
+        then(userPersistencePort).should().deleteUserAndRelatedData(id);
+        verifyNoInteractions(mongoTemplate);
     }
 
     @Test
     void shouldThrowWhenDeletingNonExistentUser() {
         UUID id = UUID.randomUUID();
-        given(mongoPersistencePort.findById(id)).willReturn(Optional.empty());
+        given(userPersistencePort.findById(id)).willReturn(Optional.empty());
 
         assertThatThrownBy(() -> mongoUserService.deleteUser(id.toString()))
                 .isInstanceOf(ResourceNotFoundException.class);
 
-        then(mongoPersistencePort).should(never()).deleteUserAndRelatedData(any());
+        then(userPersistencePort).should(never()).deleteUserAndRelatedData(any());
         verifyNoInteractions(mongoTemplate);
     }
 
@@ -266,13 +292,13 @@ class MongoUserServiceTest {
         User user = new User(id, "Other User", "other", "pass");
 
         mockAuthentication("me");
-        given(mongoPersistencePort.findById(id)).willReturn(Optional.of(user));
+        given(userPersistencePort.findById(id)).willReturn(Optional.of(user));
 
         assertThatThrownBy(() -> mongoUserService.deleteUser(id.toString()))
                 .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("You can only modify your own user record");
 
-        then(mongoPersistencePort).should(never()).deleteUserAndRelatedData(any());
+        then(userPersistencePort).should(never()).deleteUserAndRelatedData(any());
         verifyNoInteractions(mongoTemplate);
     }
 }

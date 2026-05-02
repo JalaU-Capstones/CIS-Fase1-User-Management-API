@@ -4,8 +4,9 @@ import com.cis.api.dto.UserMapper;
 import com.cis.api.dto.UserRequestDto;
 import com.cis.api.dto.UserResponseDto;
 import com.cis.api.exception.ResourceNotFoundException;
+import com.cis.api.fallback.DatabaseFallbackService;
 import com.cis.api.model.User;
-import com.cis.api.repository.MongoPersistencePort;
+import com.cis.api.repository.UserPersistencePort;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Profile;
 import org.springframework.security.access.AccessDeniedException;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.mongodb.core.MongoTemplate;
 import org.springframework.data.mongodb.core.query.Criteria;
 import org.springframework.data.mongodb.core.query.Query;
+import org.springframework.beans.factory.ObjectProvider;
 
 import java.util.List;
 import java.util.LinkedHashSet;
@@ -30,18 +32,19 @@ import java.util.ArrayList;
 @RequiredArgsConstructor
 public class MongoUserService {
 
-    private final MongoPersistencePort mongoPersistencePort;
+    private final UserPersistencePort userPersistencePort;
     private final PasswordEncoder passwordEncoder;
     private final MongoTemplate mongoTemplate;
+    private final ObjectProvider<DatabaseFallbackService> databaseFallbackServiceProvider;
 
     public List<UserResponseDto> getAllUsers() {
-        return mongoPersistencePort.findAll().stream()
+        return userPersistencePort.findAll().stream()
                 .map(UserMapper::toResponseDto)
                 .toList();
     }
 
     public UserResponseDto getUserById(String id) {
-        return mongoPersistencePort.findById(UUID.fromString(id))
+        return userPersistencePort.findById(UUID.fromString(id))
                 .map(UserMapper::toResponseDto)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
     }
@@ -53,7 +56,7 @@ public class MongoUserService {
         user.setId(UUID.randomUUID());
         user.setPassword(passwordEncoder.encode(request.password()));
 
-        return UserMapper.toResponseDto(mongoPersistencePort.save(user));
+        return UserMapper.toResponseDto(userPersistencePort.save(user));
     }
 
     public UserResponseDto updateUser(String id, UserRequestDto request) {
@@ -72,7 +75,7 @@ public class MongoUserService {
             user.setPassword(passwordEncoder.encode(request.password()));
         }
 
-        return UserMapper.toResponseDto(mongoPersistencePort.save(user));
+        return UserMapper.toResponseDto(userPersistencePort.save(user));
     }
 
     @Transactional
@@ -81,6 +84,15 @@ public class MongoUserService {
         User user = findUserById(uuid);
 
         checkOwnership(user);
+
+        DatabaseFallbackService fallbackService = databaseFallbackServiceProvider.getIfAvailable();
+        if (fallbackService != null) {
+            // If fallback is routing v2 requests to MySQL, use the MySQL deletion strategy.
+            if (DatabaseFallbackService.DB_MYSQL.equals(fallbackService.getActiveDatabase("v2"))) {
+                userPersistencePort.deleteUserAndRelatedData(uuid);
+                return;
+            }
+        }
 
         String userId = uuid.toString();
 
@@ -136,7 +148,7 @@ public class MongoUserService {
     }
 
     private User findUserById(UUID id) {
-        return mongoPersistencePort.findById(id)
+        return userPersistencePort.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
     }
 
@@ -156,13 +168,13 @@ public class MongoUserService {
     }
 
     private void validateLoginUniqueness(String login) {
-        if (mongoPersistencePort.existsByLogin(login)) {
+        if (userPersistencePort.existsByLogin(login)) {
             throw new IllegalArgumentException("Login already exists: " + login);
         }
     }
 
     private void validateLoginUniqueness(String login, UUID userId) {
-        if (mongoPersistencePort.existsByLoginAndIdNot(login, userId)) {
+        if (userPersistencePort.existsByLoginAndIdNot(login, userId)) {
             throw new IllegalArgumentException("Login already exists: " + login);
         }
     }

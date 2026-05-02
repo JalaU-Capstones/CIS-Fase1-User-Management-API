@@ -11,9 +11,51 @@ This API supports dual persistence:
 - **v1 (`/api/v1`):** Uses MySQL as the primary data store (default).
 - **v2 (`/api/v2`):** Uses MongoDB as the primary data store.
 
-### Switching Persistence (v1 default)
+### Emergency Database Fallback (MySQL <-> MongoDB)
 
-The application uses the `db.type` property to choose which repository implementation to use for the default `UserPersistencePort`.
+When enabled, the API continuously checks connectivity to both MySQL and MongoDB and automatically switches to the
+healthy database if one goes down.
+
+Behavior:
+
+- If **both databases are healthy**:
+  - `/api/v1/**` uses **MySQL**
+  - `/api/v2/**` uses **MongoDB**
+- If **MySQL is down** (MongoDB healthy): **both** `/api/v1/**` and `/api/v2/**` use **MongoDB**.
+- If **MongoDB is down** (MySQL healthy): **both** `/api/v1/**` and `/api/v2/**` use **MySQL**.
+- If **both databases are down**: all requests return HTTP `503` with:
+
+```
+Please try again later. Our maintenance team is working to resolve this issue.
+```
+
+#### Maintenance Mode for Writes
+
+When the system is operating in fallback mode (only one database is healthy), all **write** operations
+(`POST`, `PUT`, `DELETE`, or any non-`GET`) return HTTP `503` with:
+
+```
+Our system is currently undergoing planned maintenance. Please try again later.
+Recommendation: Until further notice, avoid creating, updating, or deleting any resources. Your data is safe, but modifications may not be persisted. If you cannot find recently created items, please wait for the IT department to contact you.
+```
+
+#### Feature Toggle
+
+In `application.yml`:
+
+```yaml
+app:
+  fallback:
+    enabled: true
+```
+
+In the `test` profile (unit tests), fallback is disabled by default to avoid requiring live MySQL/MongoDB instances.
+
+### Switching Persistence (Legacy `db.type`)
+
+Historically, the application used the `db.type` property to choose a single persistence implementation.
+With emergency fallback enabled, routing is determined dynamically by database health and API version, so `db.type` is
+no longer the primary mechanism for selecting persistence.
 
 In `application.yml`:
 
