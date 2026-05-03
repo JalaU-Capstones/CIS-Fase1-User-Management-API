@@ -226,4 +226,23 @@ class UserServiceTest {
         
         then(userPersistencePort).should(never()).deleteUserAndRelatedData(any());
     }
+
+    @Test
+    void updateUser_ShouldThrowWhenUserNotFound() {
+        UUID id = UUID.randomUUID();
+        UserRequestDto dto = new UserRequestDto("N", "l", "p");
+        given(userPersistencePort.findById(id)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.updateUser(id.toString(), dto))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void getUserById_ShouldThrowWhenNotFound() {
+        UUID id = UUID.randomUUID();
+        given(userPersistencePort.findById(id)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> userService.getUserById(id.toString()))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
 }

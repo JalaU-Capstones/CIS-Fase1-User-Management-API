@@ -35,6 +35,13 @@ class UserMapperTest {
     }
 
     @Test
+    void toResponseDto_ShouldHandleNullMongoId() {
+        MongoUser user = new MongoUser(null, "John Doe", "jdoe", "pass");
+        UserResponseDto dto = UserMapper.toResponseDto(user);
+        assertThat(dto.id()).isNull();
+    }
+
+    @Test
     void toEntity_ShouldMapDtoToUser() {
         UserRequestDto dto = new UserRequestDto("Jane Smith", "jsmith", "newpass");
 

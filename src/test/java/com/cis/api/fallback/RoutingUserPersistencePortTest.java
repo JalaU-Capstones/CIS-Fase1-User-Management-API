@@ -58,4 +58,54 @@ class RoutingUserPersistencePortTest {
         assertThat(router.findById(id)).contains(u);
         then(mongo).should().findById(id);
     }
+
+    @Test
+    void delegatesOtherMethodsToActiveDatabase() {
+        MySqlPersistencePort mysql = mock(MySqlPersistencePort.class);
+        MongoPersistencePort mongo = mock(MongoPersistencePort.class);
+        DatabaseFallbackService fallbackService = mock(DatabaseFallbackService.class);
+        RoutingUserPersistencePort router = new RoutingUserPersistencePort(mysql, mongo, fallbackService);
+
+        UUID id = UUID.randomUUID();
+        User u = new User(id, "C", "c", "p");
+
+        // Test findByLogin
+        given(fallbackService.getActiveDatabase(null)).willReturn(DatabaseFallbackService.DB_MYSQL);
+        given(mysql.findByLogin("c")).willReturn(Optional.of(u));
+        assertThat(router.findByLogin("c")).contains(u);
+
+        // Test save
+        given(fallbackService.getActiveDatabase(null)).willReturn(DatabaseFallbackService.DB_MONGO);
+        given(mongo.save(u)).willReturn(u);
+        assertThat(router.save(u)).isEqualTo(u);
+
+        // Test deleteById
+        router.deleteById(id);
+        then(mongo).should().deleteById(id);
+
+        // Test existsByLogin
+        given(mongo.existsByLogin("c")).willReturn(true);
+        assertThat(router.existsByLogin("c")).isTrue();
+
+        // Test existsByLoginAndIdNot
+        given(mongo.existsByLoginAndIdNot("c", id)).willReturn(false);
+        assertThat(router.existsByLoginAndIdNot("c", id)).isFalse();
+
+        // Test deleteUserAndRelatedData
+        router.deleteUserAndRelatedData(id);
+        then(mongo).should().deleteUserAndRelatedData(id);
+    }
+
+    @Test
+    void defaultsToMySqlWhenActiveDatabaseIsUnknown() {
+        MySqlPersistencePort mysql = mock(MySqlPersistencePort.class);
+        MongoPersistencePort mongo = mock(MongoPersistencePort.class);
+        DatabaseFallbackService fallbackService = mock(DatabaseFallbackService.class);
+        RoutingUserPersistencePort router = new RoutingUserPersistencePort(mysql, mongo, fallbackService);
+
+        given(fallbackService.getActiveDatabase(null)).willReturn("UNKNOWN");
+        router.findAll();
+
+        then(mysql).should().findAll();
+    }
 }

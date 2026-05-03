@@ -104,16 +104,53 @@ class ConsoleCommandListenerTest {
     }
 
     @Test
-    void testDisabledViaProperty() {
-        System.setProperty("console.input.disabled", "true");
+    void testQuitCommand() {
+        ConsoleCommandListener listener = createListener("quit\n");
+        listener.run();
+
+        assertTrue(testOut.toString().contains("Shutting down console listener..."));
+    }
+
+    @Test
+    void testEmptyCommand() {
+        ConsoleCommandListener listener = createListener("\nexit\n");
+        listener.run();
+        // Should not crash, just show prompt again
+    }
+
+    @Test
+    void testMaintenanceNoArg() {
+        ConsoleCommandListener listener = createListener("maintenance\nexit\n");
+        listener.run();
+        assertTrue(testOut.toString().contains("Usage: maintenance [on|off]"));
+    }
+
+    @Test
+    void testSunsetNoArg() {
+        ConsoleCommandListener listener = createListener("sunset\nexit\n");
+        listener.run();
+        assertTrue(testOut.toString().contains("Usage: sunset [on|off]"));
+    }
+
+    @Test
+    void testStartWhenEnabled() {
+        System.setProperty("console.input.disabled", "false");
         try {
-            ConsoleCommandListener listener = createListener("status\nexit\n");
+            ConsoleCommandListener listener = createListener("exit\n");
             listener.start();
-            // Since it's disabled, the thread shouldn't start. 
-            // We can't easily check the thread, but we can check it doesn't process input.
-            // But start() is async.
+            // Just verifying it starts without exception
+            listener.stop();
         } finally {
             System.clearProperty("console.input.disabled");
         }
+    }
+
+    @Test
+    void testStopMethod() {
+        ConsoleCommandListener listener = createListener("status\nstatus\nstatus\n");
+        listener.stop();
+        listener.run();
+        // Should stop immediately and not process status
+        assertTrue(!testOut.toString().contains("Migration running"));
     }
 }
