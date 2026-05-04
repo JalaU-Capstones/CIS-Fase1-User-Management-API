@@ -17,7 +17,12 @@ spring:
 
   data:
     mongodb:
-      uri: mongodb://localhost:27017/sd3_test
+      uri: mongodb://localhost:27017/nonexistent?connectTimeoutMS=100
+      uuid-representation: java_legacy
+
+logging:
+  level:
+    org.mongodb.driver: ERROR
 
 application-properties:
   jwt:

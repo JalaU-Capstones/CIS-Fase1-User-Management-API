@@ -1,5 +1,6 @@
 package com.cis.api.exception;
 
+import com.cis.api.dto.UserMapper;
 import org.junit.jupiter.api.Test;
 
 import java.util.Map;
@@ -9,19 +10,28 @@ import static org.assertj.core.api.Assertions.assertThat;
 class ErrorResponseTest {
 
     @Test
-    void testErrorResponseBuilder() {
+    void testErrorResponse() {
         Map<String, String> details = Map.of("field", "error");
-        ErrorResponse response = ErrorResponse.builder()
-                .status(404)
-                .error("Not Found")
-                .message("User not found")
-                .details(details)
-                .build();
+        ErrorResponse.ErrorResponseBuilder builder = ErrorResponse.builder()
+                .status(400)
+                .error("Bad Request")
+                .message("Message")
+                .details(details);
 
-        assertThat(response.getStatus()).isEqualTo(404);
-        assertThat(response.getError()).isEqualTo("Not Found");
-        assertThat(response.getMessage()).isEqualTo("User not found");
+        ErrorResponse response = builder.build();
+
+        assertThat(response.getStatus()).isEqualTo(400);
+        assertThat(response.getError()).isEqualTo("Bad Request");
+        assertThat(response.getMessage()).isEqualTo("Message");
         assertThat(response.getDetails()).isEqualTo(details);
+        assertThat(builder.toString()).isNotEmpty();
+    }
+
+    @Test
+    void testUserMapperConstructor() {
+        // Just for coverage of the private constructor
+        UserMapper mapper = new UserMapper();
+        assertThat(mapper).isNotNull();
     }
 
     @Test

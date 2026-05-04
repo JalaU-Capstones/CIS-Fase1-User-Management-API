@@ -301,4 +301,23 @@ class MongoUserServiceTest {
         then(userPersistencePort).should(never()).deleteUserAndRelatedData(any());
         verifyNoInteractions(mongoTemplate);
     }
+
+    @Test
+    void getUserById_ShouldThrowWhenNotFound() {
+        UUID id = UUID.randomUUID();
+        given(userPersistencePort.findById(id)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> mongoUserService.getUserById(id.toString()))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
+
+    @Test
+    void updateUser_ShouldThrowWhenNotFound() {
+        UUID id = UUID.randomUUID();
+        UserRequestDto dto = new UserRequestDto("N", "l", "p");
+        given(userPersistencePort.findById(id)).willReturn(Optional.empty());
+
+        assertThatThrownBy(() -> mongoUserService.updateUser(id.toString(), dto))
+                .isInstanceOf(ResourceNotFoundException.class);
+    }
 }

@@ -1,5 +1,6 @@
 package com.cis.api.exception;
 
+import com.cis.api.fallback.BothDatabasesDownException;
 import org.junit.jupiter.api.Test;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -61,5 +62,29 @@ class GlobalExceptionHandlerTest {
         
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
         assertThat(response.getBody().getError()).isEqualTo("Internal Server Error");
+    }
+
+    @Test
+    void handleBothDatabasesDown_ShouldReturn503() {
+        BothDatabasesDownException ex = new BothDatabasesDownException("Down");
+        ResponseEntity<String> response = handler.handleBothDatabasesDown(ex);
+        
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.SERVICE_UNAVAILABLE);
+        assertThat(response.getBody()).contains("maintenance team");
+    }
+
+    @Test
+    void handleValidationExceptions_ShouldReturn400WithDetails() {
+        MethodParameter parameter = mock(MethodParameter.class);
+        BeanPropertyBindingResult bindingResult = new BeanPropertyBindingResult(new Object(), "obj");
+        bindingResult.addError(new FieldError("obj", "field", "error message"));
+        MethodArgumentNotValidException ex = new MethodArgumentNotValidException(parameter, bindingResult);
+        
+        ResponseEntity<ErrorResponse> response = handler.handleValidationExceptions(ex);
+        
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().getError()).isEqualTo("Validation Failed");
+        assertThat(response.getBody().getDetails()).containsKey("field");
+        assertThat(response.getBody().getDetails().get("field")).isEqualTo("error message");
     }
 }
